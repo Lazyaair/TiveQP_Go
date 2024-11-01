@@ -16,5 +16,6 @@ func UserLocation(u *User) ([]string, error) {
 	return nil, nil
 }
 func UserTime(u *User) ([]string, error) {
+
 	return nil, nil
 }
