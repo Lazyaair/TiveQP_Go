@@ -14,5 +14,5 @@ func TestTimeRangeEncoding(t *testing.T) {
 }
 
 func TestTimeRangeEncodingComplement(t *testing.T) {
-	fmt.Println(TimeRangeEncodingComplement(8, 0, 12, 0))
+	fmt.Println(TimeRangeEncodingComplement(8, 48, 8, 50))
 }
