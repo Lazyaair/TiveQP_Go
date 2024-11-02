@@ -3,6 +3,8 @@ package indexbuilding
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 )
 
 // 分割段数
@@ -16,11 +18,50 @@ func Projection(minVal, maxVal, currentVal float64) int {
 	return int(math.Floor(result))
 }
 
+// 为编码添加城市索引
+func AddCityIndex(cityName string, code []string) error { //
+	index, err := GetCityIndex(cityName)
+	if err != nil {
+		return fmt.Errorf("city not exists")
+	}
+	prefix := strconv.Itoa(index) + ":"
+	for i, v := range code {
+		var builder strings.Builder
+		builder.Grow(len(prefix) + len(v)) // 预分配内存，避免多次扩容
+		builder.WriteString(prefix)
+		builder.WriteString(v)
+		code[i] = builder.String()
+	}
+	return nil
+}
+
+// 对用户
+func LocationEncodingUser(cityName string, lat, lng float64) ([]string, error) {
+	cityIndex, err := GetCityIndex(cityName)
+	if err != nil {
+		return nil, fmt.Errorf("city not exists")
+	}
+	cityBoundary := GetCityLatLng(cityIndex)
+
+	// 经纬度投影编号
+	num_lat := Projection(cityBoundary[0], cityBoundary[1], lat)
+	num_lng := Projection(cityBoundary[2], cityBoundary[3], lng)
+
+	// 网格编号
+	place_index := num_lng*splitCount + num_lat
+
+	return Prefix(bitsize, place_index)
+}
+
 // 网格分割
 // 边界判断
 // 坐标编码
+// 对拥有者
 func LocationEncoding(cityName string, lat, lng float64) ([]string, error) {
-	cityIndex := GetCityIndex(cityName)
+	cityIndex, err := GetCityIndex(cityName)
+	if err != nil {
+		return nil, fmt.Errorf("city not exists")
+	}
 	cityBoundary := GetCityLatLng(cityIndex)
 
 	// 经纬度投影编号
@@ -106,8 +147,12 @@ func LocationEncoding(cityName string, lat, lng float64) ([]string, error) {
 	}
 }
 
+// 对拥有者
 func LocationEncodingComplement(cityName string, lat, lng float64) ([]string, error) {
-	cityIndex := GetCityIndex(cityName)
+	cityIndex, err := GetCityIndex(cityName)
+	if err != nil {
+		return nil, fmt.Errorf("city not exists")
+	}
 	cityBoundary := GetCityLatLng(cityIndex)
 
 	// 经纬度投影编号
@@ -197,4 +242,18 @@ func LocationEncodingComplement(cityName string, lat, lng float64) ([]string, er
 	default:
 		return nil, fmt.Errorf("经纬度编号有误！")
 	}
+}
+
+// 添加城市编号到编码数组中
+func AddCityNumber(cityName string, encode []string) ([]string, error) {
+	cityIndex := GetCityIndex(cityName)
+	if cityIndex == -1 {
+		return nil, fmt.Errorf("未找到指定城市：%s", cityName)
+	}
+
+	for i := 0; i < len(encode); i++ {
+		encode[i] = fmt.Sprintf("%d|%s", cityIndex, encode[i])
+	}
+
+	return encode, nil
 }
