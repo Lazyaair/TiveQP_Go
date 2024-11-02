@@ -38,6 +38,16 @@ func TestLocationEncoding(t *testing.T) {
 	fmt.Println("ComplementCode:", locationCodeComplement)
 }
 
+func TestAddCityIndex(t *testing.T) {
+	cityName := "ATLANTA"
+	lat := 33.7660237
+	lng := -84.5301237
+	locationcode, _ := LocationEncodingUser(cityName, lat, lng)
+	fmt.Println("Code:", locationcode)
+	AddCityIndex(cityName, locationcode)
+	fmt.Println("Code with index:", locationcode)
+}
+
 // time test
 func TestTimePointEncoding(t *testing.T) {
 	fmt.Println(TimePointEncoding(12, 11))
@@ -67,5 +77,11 @@ func TestTypeEncodingComplement(t *testing.T) {
 }
 
 // user test
+func TestUser(t *testing.T) {
+
+}
 
 // owner test
+func TestOwner(t *testing.T) {
+
+}

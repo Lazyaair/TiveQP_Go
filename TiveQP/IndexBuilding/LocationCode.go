@@ -3,6 +3,7 @@ package indexbuilding
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -17,12 +18,13 @@ func Projection(minVal, maxVal, currentVal float64) int {
 	return int(math.Floor(result))
 }
 
+// 为编码添加城市索引
 func AddCityIndex(cityName string, code []string) error { //
 	index, err := GetCityIndex(cityName)
 	if err != nil {
 		return fmt.Errorf("city not exists")
 	}
-	prefix := string(index) + ":"
+	prefix := strconv.Itoa(index) + ":"
 	for i, v := range code {
 		var builder strings.Builder
 		builder.Grow(len(prefix) + len(v)) // 预分配内存，避免多次扩容

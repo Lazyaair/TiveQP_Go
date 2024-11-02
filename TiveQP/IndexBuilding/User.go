@@ -1,5 +1,6 @@
 package indexbuilding
 
+// city转大写
 type User struct {
 	Type      string
 	City      string
@@ -9,12 +10,19 @@ type User struct {
 	MinStart  int
 }
 
-func UserType(u *User) ([]string, error) {
-	return nil, nil
+func (u *User) TypeEncode() ([]string, error) {
+	return TypeEncoding(u.Type)
 }
-func UserLocation(u *User) ([]string, error) {
-	return nil, nil
+
+func (u *User) LocationEncode() ([]string, error) {
+	locationCode, err := LocationEncodingUser(u.City, u.Lat, u.Lng)
+	if err != nil {
+		return nil, err
+	}
+	AddCityIndex(u.City, locationCode)
+	return locationCode, nil
 }
-func UserTime(u *User) ([]string, error) {
-	return nil, nil
+
+func (u *User) TimeEncode() ([]string, error) {
+	return TimePointEncoding(u.HourStart, u.MinStart)
 }
