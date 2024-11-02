@@ -198,3 +198,17 @@ func LocationEncodingComplement(cityName string, lat, lng float64) ([]string, er
 		return nil, fmt.Errorf("经纬度编号有误！")
 	}
 }
+
+// 添加城市编号到编码数组中
+func AddCityNumber(cityName string, encode []string) ([]string, error) {
+	cityIndex := GetCityIndex(cityName)
+	if cityIndex == -1 {
+		return nil, fmt.Errorf("未找到指定城市：%s", cityName)
+	}
+
+	for i := 0; i < len(encode); i++ {
+		encode[i] = fmt.Sprintf("%d|%s", cityIndex, encode[i])
+	}
+
+	return encode, nil
+}
