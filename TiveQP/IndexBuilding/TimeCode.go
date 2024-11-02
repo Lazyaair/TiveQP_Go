@@ -5,7 +5,7 @@ package indexbuilding
 //             时间 0000 - 2350  6 bit 半小时为最小单位
 //             日期 转化为 星期
 
-// hour:min 时间点
+// hour:min 时间点 用户使用
 func TimePointEncoding(hour, min int) ([]string, error) {
 	time := hour * 2
 	if min >= 30 {
@@ -14,7 +14,7 @@ func TimePointEncoding(hour, min int) ([]string, error) {
 	return Prefix(6, time)
 }
 
-// 时间范围 [start,end) 左闭右开
+// 时间范围 [start,end) 左闭右开 拥有者使用
 func TimeRangeEncoding(hour_start, min_start, hour_end, min_end int) ([]string, error) {
 	time_start := hour_start * 2
 	if min_start >= 30 {
@@ -29,7 +29,6 @@ func TimeRangeEncoding(hour_start, min_start, hour_end, min_end int) ([]string, 
 }
 
 // 时间范围补集
-
 func TimeRangeEncodingComplement(hour_start, min_start, hour_end, min_end int) ([]string, error) {
 	time_start := hour_start * 2
 	if min_start >= 30 {
