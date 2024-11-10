@@ -1,8 +1,12 @@
 package construction
 
-// TreeNode 表示二叉树的节点
-type TreeNode struct {
+// LeafNode 表示下层树的节点
+type LeafNode struct {
 	Value int
-	Left  *TreeNode
-	Right *TreeNode
+	Left  *LeafNode
+	Right *LeafNode
+}
+
+// TypeNode 表示上层树的节点
+type TypeNode struct {
 }

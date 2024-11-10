@@ -6,20 +6,20 @@ import (
 )
 
 // BuildTypeTree 并行构建平衡二叉树
-func BuildTypeTree(values []int) *TreeNode {
+func BuildTypeTree(values []int) *LeafNode {
 	const minParallelSize = 50000
 	return buildTypeTree(values, minParallelSize)
 }
 
 // buildTypeTree 是递归构建平衡二叉树的内部函数，使用 `WaitGroup` 同步并行任务
-func buildTypeTree(values []int, minParallelSize int) *TreeNode {
+func buildTypeTree(values []int, minParallelSize int) *LeafNode {
 	if len(values) == 0 {
 		return nil
 	}
 
 	// 找到中间位置，创建根节点
 	mid := len(values) / 2
-	root := &TreeNode{Value: values[mid]}
+	root := &LeafNode{Value: values[mid]}
 
 	// 根据数组大小决定是否并行构建左右子树
 	if len(values) > minParallelSize {
@@ -51,7 +51,7 @@ func buildTypeTree(values []int, minParallelSize int) *TreeNode {
 }
 
 // PrintTree 中序遍历打印树节点
-func PrintTree(node *TreeNode) {
+func PrintTree(node *LeafNode) {
 	if node == nil {
 		return
 	}
