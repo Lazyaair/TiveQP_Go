@@ -1,6 +1,7 @@
 package construction
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -41,4 +42,18 @@ func TestTypeTree(t *testing.T) {
 	// fmt.Printf("并行构建平衡二叉树耗时: %v\n", elapsedParallel)
 	// _ = rootParallel
 	// _ = rootSequential
+}
+
+func TestLoadData(t *testing.T) {
+	filename := "E:\\Github\\TiveQP\\TiveQP\\TiveQP\\Data\\20k.txt" // 文件名
+	owners, err := LoadOwners(filename)
+	if err != nil {
+		fmt.Println("加载 Owner 数据出错:", err)
+		return
+	}
+
+	// 输出所有加载的 Owner 对象
+	for _, owner := range owners {
+		fmt.Printf("%+v\n", *owner)
+	}
 }
