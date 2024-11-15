@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenStreetMap 示例</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        #filter-container {
+            width: 250px;  /* 左侧筛选栏固定宽度 */
+            background-color: #f8f8f8;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        #filter-container h3 {
+            margin-top: 0;
+        }
+        #map-container {
+            flex-grow: 1; /* 使地图区域填充剩余空间 */
+            height: 100%;
+        }
+        .checkbox-container {
+            margin-bottom: 10px;
+        }
+        .checkbox-container input {
+            margin-right: 8px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="filter-container">
+        <h3>选择位置类型</h3>
+        <div id="location-type-list">
+            <!-- 动态加载位置类型复选框 -->
+        </div>
+    </div>
+    <div id="map-container"></div>
+
+    <script>
+        // 创建地图实例
+        var map = L.map('map-container').setView([33.7723508572, -84.3737814], 11);  // 设置地图中心为指定经纬度
+
+        // 添加 OpenStreetMap 图层
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // 存储所有的地点数据
+        var allLocations = [];
+        var markers = []; // 用于存储已显示的标记
+
+        // 颜色映射：根据类型设置不同的颜色
+        const typeColors = {
+            'Automotive': '#28a745',  // green
+            'Active Life': '#007bff',  // blue
+            'Breakfast & Brunch': '#ff6600',  // orange
+            'Beauty & Spas': '#800080',  // purple
+            'American (New)': '#ffcc00',  // yellow
+            'Health & Medical': '#000000',  // black
+            'Sandwiches': '#ffffff',  // white
+            'Nightlife': '#ff1493',  // deep pink
+            'Fashion': '#fa8072',  // salmon
+            'Home Services': '#800000',  // maroon
+            'Food': '#ff7f50',  // coral
+            'Event Planning & Services': '#000080',  // navy
+            'Hair Salons': '#00ffff',  // cyan
+            'Restaurants': '#ff5733',  // dark orange
+            'American (Traditional)': '#f1c40f',  // golden yellow
+            'Bars': '#9b59b6',  // violet
+            'Local Services': '#2ecc71',  // light green
+            'Home & Garden': '#3498db',  // light blue
+            'Coffee & Tea': '#f39c12',  // golden yellow
+            'Shopping': '#e74c3c',  // red
+            'default': '#d9534f'  // red
+        };
+
+        // 从后端获取位置数据
+        fetch('http://localhost:3000/locations')
+            .then(response => response.json())
+            .then(locations => {
+                allLocations = locations;
+
+                // 获取所有的地点类型（不重复）
+                var locationTypes = [...new Set(locations.map(location => location.type))];
+
+                // 填充筛选栏的复选框
+                var locationTypeList = document.getElementById("location-type-list");
+                locationTypes.forEach(type => {
+                    var checkboxContainer = document.createElement("div");
+                    checkboxContainer.classList.add("checkbox-container");
+
+                    var checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = type;
+                    checkbox.value = type;
+
+                    var label = document.createElement("label");
+                    label.setAttribute("for", type);
+                    label.textContent = type;
+
+                    checkboxContainer.appendChild(checkbox);
+                    checkboxContainer.appendChild(label);
+
+                    locationTypeList.appendChild(checkboxContainer);
+
+                    // 为每个复选框绑定事件，更新地图标记
+                    checkbox.addEventListener('change', function() {
+                        updateMarkers();
+                    });
+                });
+
+                // 更新地图标记函数：显示选择类型的地点
+                function updateMarkers() {
+                    // 清除地图上的所有现有标记
+                    markers.forEach(marker => map.removeLayer(marker));
+
+                    // 清空 markers 数组
+                    markers = [];
+
+                    // 获取选中的类型
+                    var selectedTypes = Array.from(document.querySelectorAll('#location-type-list input:checked')).map(input => input.value);
+
+                    // 遍历所有位置，显示符合选中类型的标记
+                    selectedTypes.forEach(type => {
+                        allLocations.forEach(function(location) {
+                            if (location.type === type) {
+                                // 获取对应类型的颜色，默认使用 'default' 的颜色
+                                let color = typeColors[location.type] || typeColors['default'];
+
+                                // 创建圆点标记并根据类型设置颜色
+                                var marker = L.circleMarker([location.lat, location.lng], {
+                                    radius: 8,
+                                    color: color,
+                                    fillColor: color,
+                                    fillOpacity: 0.8,
+                                    weight: 3,
+                                    opacity: 1,
+                                    zIndexOffset: 1000
+                                }).addTo(map)
+                                .bindPopup(
+                                    "<b>" + location.city + "</b><br>" +
+                                    "类型: " + location.type + "<br>" +
+                                    "开放时间: " + location.openHour + ":" + location.openMin + "<br>" +
+                                    "关闭时间: " + location.closeHour + ":" + location.closeMin + "<br>" +
+                                    "纬度: " + location.lat + "<br>" + 
+                                    "经度: " + location.lng
+                                );
+
+                                // 保存标记以便移除
+                                markers.push(marker);
+                            }
+                        });
+                    });
+                }
+
+                // 初始时显示所有勾选类型的标记
+                updateMarkers();
+            })
+            .catch(error => {
+                console.error('Error loading locations:', error);
+            });
+    </script>
+</body>
+</html>
