@@ -1,11 +1,13 @@
 package construction
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"io"
 	"math/big"
 	"strconv"
@@ -138,31 +140,61 @@ func InsertCS(twinlist *TwinBitArray, data string, bit_CS_i, keylist []string, h
 
 // AES 加密
 // AES加密函数（CBC模式）
-func Encrypt(plaintext, key []byte) ([]byte, error) {
-	// 确保密钥长度为16、24或32字节（分别对应AES-128, AES-192, AES-256）
+// Encrypt 使用AES加密（CBC模式），确保输入明文符合块大小要求
+func Encrypt(plainText, key []byte) ([]byte, error) {
+	// 1. 创建AES cipher块
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
 
-	// 创建一个随机的初始化向量（IV），长度为AES的块大小（16字节）
-	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
-	iv := ciphertext[:aes.BlockSize]
+	// 2. 补充明文至块大小的倍数，使用PKCS7填充
+	blockSize := block.BlockSize()
+	padding := blockSize - len(plainText)%blockSize
+	paddedText := append(plainText, bytes.Repeat([]byte{byte(padding)}, padding)...)
+
+	// 3. 创建CBC模式的加密器
+	ciphertext := make([]byte, len(paddedText))
+	iv := make([]byte, blockSize) // 初始化向量
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return nil, err
 	}
 
-	// 创建一个AES加密模式（CBC模式）
+	// 4. 使用CBC模式进行加密
 	mode := cipher.NewCBCEncrypter(block, iv)
+	mode.CryptBlocks(ciphertext, paddedText)
 
-	// 对明文进行填充，使其长度为16的倍数
-	padding := aes.BlockSize - len(plaintext)%aes.BlockSize
-	// 填充后的明文长度为 aes.BlockSize 的倍数
-	paddedPlaintext := append(plaintext, byte(padding))
+	// 5. 返回包含iv和密文的结果，iv放在密文的前面
+	return append(iv, ciphertext...), nil
+}
 
-	// 使用CBC模式加密明文
-	mode.CryptBlocks(ciphertext[aes.BlockSize:], paddedPlaintext)
+// Decrypt 解密使用AES（CBC模式）
+func Decrypt(cipherText, key []byte) ([]byte, error) {
+	// 1. 创建AES cipher块
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
 
-	// 返回加密后的密文
-	return ciphertext, nil
+	// 2. 提取iv和密文，iv在前面，密文在后面
+	blockSize := block.BlockSize()
+	if len(cipherText) < blockSize {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+	iv := cipherText[:blockSize]
+	ciphertext := cipherText[blockSize:]
+
+	// 3. 创建CBC模式的解密器
+	plaintext := make([]byte, len(ciphertext))
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(plaintext, ciphertext)
+
+	// 4. 去掉填充，解密后的文本
+	padding := int(plaintext[len(plaintext)-1])
+	if padding > len(plaintext) || padding > blockSize {
+		return nil, fmt.Errorf("invalid padding")
+	}
+	plaintext = plaintext[:len(plaintext)-padding]
+
+	return plaintext, nil
 }
