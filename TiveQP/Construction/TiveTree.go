@@ -3,33 +3,62 @@ package construction
 import (
 	indexbuilding "TiveQP/IndexBuilding"
 	"fmt"
+	"sync"
 )
 
 // BuildTreesByChunks 函数用于将owners分为多个小块，每1000个元素建一棵树
 func BuildTreesByChunks(owners []*indexbuilding.Owner, ibfLength int, Keylist []string, rb int) ([]*Node, error) {
 	var subroots []*Node
 	chunkSize := 1000
-	numChunks := len(owners) / chunkSize
+	numChunks := (len(owners) + chunkSize - 1) / chunkSize // 计算总块数
 
-	// 对每一块数据（每1000个元素），构建一棵树
+	// 定义通道用于接收结果和错误
+	results := make(chan *Node, numChunks)
+	errors := make(chan error, numChunks)
+
+	var wg sync.WaitGroup
 	for i := 0; i < numChunks; i++ {
 		startIdx := i * chunkSize
-		endIdx := (i + 1) * chunkSize
+		endIdx := startIdx + chunkSize
+		if endIdx > len(owners) {
+			endIdx = len(owners)
+		}
 		chunk := owners[startIdx:endIdx]
 
-		// 构建每个小块的树
-		treeRoot, err := BuildTree(chunk, ibfLength, Keylist, rb)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build tree for chunk %d: %v", i, err)
-		}
+		// 启动 Goroutine 构建每个小块的树
+		wg.Add(1)
+		go func(chunk []*indexbuilding.Owner, idx int) {
+			defer wg.Done()
+			treeRoot, err := BuildTree(chunk, ibfLength, Keylist, rb)
+			if err != nil {
+				errors <- fmt.Errorf("failed to build tree for chunk %d: %v", idx, err)
+				return
+			}
 
-		// 获取子树的根节点（即每棵树的最上层节点）
-		err = treeRoot.InitUpLeafNode(chunk[0].Type, ibfLength, Keylist, rb)
-		if err != nil {
-			return nil, fmt.Errorf("failed to initialize subroot for chunk %d: %v", i, err)
-		}
+			// 初始化子树的根节点
+			err = treeRoot.InitUpLeafNode(chunk[0].Type, ibfLength, Keylist, rb)
+			if err != nil {
+				errors <- fmt.Errorf("failed to initialize subroot for chunk %d: %v", idx, err)
+				return
+			}
 
-		subroots = append(subroots, treeRoot)
+			results <- treeRoot
+		}(chunk, i)
+	}
+
+	// 等待所有 Goroutine 完成
+	wg.Wait()
+	close(results)
+	close(errors)
+
+	// 检查是否有错误
+	if len(errors) > 0 {
+		return nil, <-errors
+	}
+
+	// 收集结果
+	for root := range results {
+		subroots = append(subroots, root)
 	}
 
 	return subroots, nil
@@ -37,12 +66,10 @@ func BuildTreesByChunks(owners []*indexbuilding.Owner, ibfLength int, Keylist []
 
 // BuildTree 函数构建单棵树
 func BuildTree(owners []*indexbuilding.Owner, ibfLength int, Keylist []string, rb int) (*Node, error) {
-	// 如果 owners 数组为空，返回 nil
 	if len(owners) == 0 {
 		return nil, fmt.Errorf("owners list is empty")
 	}
 
-	// 当只有一个 Owner 时，创建叶节点并返回
 	if len(owners) == 1 {
 		leafNode := &Node{}
 		err := leafNode.InitLeafNode(owners[0], ibfLength, Keylist, rb)
@@ -52,30 +79,43 @@ func BuildTree(owners []*indexbuilding.Owner, ibfLength int, Keylist []string, r
 		return leafNode, nil
 	}
 
-	// 将 owners 切割成两个部分
 	mid := len(owners) / 2
 	leftOwners := owners[:mid]
 	rightOwners := owners[mid:]
 
-	// 递归构建左子树和右子树
-	leftNode, err := BuildTree(leftOwners, ibfLength, Keylist, rb)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build left subtree: %v", err)
+	var leftNode, rightNode *Node
+	var leftErr, rightErr error
+	var wg sync.WaitGroup
+
+	// 并行构建左右子树
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		leftNode, leftErr = BuildTree(leftOwners, ibfLength, Keylist, rb)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rightNode, rightErr = BuildTree(rightOwners, ibfLength, Keylist, rb)
+	}()
+
+	// 等待左右子树构建完成
+	wg.Wait()
+
+	if leftErr != nil {
+		return nil, leftErr
+	}
+	if rightErr != nil {
+		return nil, rightErr
 	}
 
-	rightNode, err := BuildTree(rightOwners, ibfLength, Keylist, rb)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build right subtree: %v", err)
-	}
-
-	// 创建一个中间节点，并合并左右子树
+	// 创建并初始化中间节点
 	midNode := &Node{
 		Left:  leftNode,
 		Right: rightNode,
 	}
-
-	// 初始化中间节点
-	err = midNode.InitMidNode(ibfLength, Keylist, rb)
+	err := midNode.InitMidNode(ibfLength, Keylist, rb)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize mid node: %v", err)
 	}
@@ -130,21 +170,21 @@ func CreateFinalTree(subroots []*Node, ibfLength int, Keylist []string, rb int) 
 }
 
 // PreOrderTraversal 实现前序遍历
-func (n *Node) PreOrderTraversal() {
+func (n *Node) PreOrderTraversal(num *int, level int) {
 	if n == nil {
 		return
 	}
 
 	// 访问当前节点（根节点）
-	fmt.Printf("%v", n) // 可以根据需要打印其他信息，比如节点的值
-
+	fmt.Printf("%d节点%d层", *num, level) // 可以根据需要打印其他信息，比如节点的值
+	*num = *num + 1
 	// 递归遍历左子树
 	if n.Left != nil {
-		n.Left.PreOrderTraversal()
+		n.Left.PreOrderTraversal(num, level+1)
 	}
 
 	// 递归遍历右子树
 	if n.Right != nil {
-		n.Right.PreOrderTraversal()
+		n.Right.PreOrderTraversal(num, level+1)
 	}
 }

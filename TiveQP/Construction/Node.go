@@ -177,7 +177,10 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 	for i := 0; i < len(dmn.TCS); i++ {
 		dmn.Bits_TCS[i] = make([]string, len(Keylist))
 		dmn.HV_TCS[i] = make([]byte, len(Keylist))
-		InsertCS(dmn.IBF, dmn.TCS[i], dmn.Bits_TCS[i], Keylist, dmn.HV_TCS[i], rb)
+		err := InsertCS(dmn.IBF, dmn.TCS[i], dmn.Bits_TCS[i], Keylist, dmn.HV_TCS[i], rb)
+		if err != nil {
+			return fmt.Errorf("IBF:%v,TCS:%v,BITTCS:%v", dmn.IBF, dmn.TCS[i], dmn.Bits_TCS[i])
+		}
 	}
 
 	// 计算节点HASH
