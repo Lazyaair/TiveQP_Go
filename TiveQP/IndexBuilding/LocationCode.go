@@ -2,7 +2,6 @@ package indexbuilding
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 )
@@ -14,8 +13,24 @@ var bitsize = 12
 
 // 区间投影
 func Projection(minVal, maxVal, currentVal float64) int {
-	result := (currentVal - minVal) / (maxVal - minVal) * float64(splitCount)
-	return int(math.Floor(result))
+	// // 用 *big.Float 来表示高精度的经纬度
+	// minF := new(big.Float).SetFloat64(minVal)
+	// maxF := new(big.Float).SetFloat64(maxVal)
+	// currentF := new(big.Float).SetFloat64(currentVal)
+	// // 计算比例: (currentVal - minVal) / (maxVal - minVal) * splitCount
+	// delta := new(big.Float).Sub(currentF, minF)                                 // currentVal - minVal
+	// rangeVal := new(big.Float).Sub(maxF, minF)                                  // maxVal - minVal
+	// proportion := new(big.Float).Quo(delta, rangeVal)                           // (currentVal - minVal) / (maxVal - minVal)
+	// scaled := new(big.Float).Mul(proportion, big.NewFloat(float64(splitCount))) // 比例 * splitCount
+	// // 向下取整: 使用 Int 来丢弃小数部分
+	// result, _ := scaled.Int(nil) // 转换为整数
+	// return (int(result.Int64()))
+	result := int((currentVal - minVal) / (maxVal - minVal) * float64(splitCount))
+	if result == splitCount {
+		return splitCount - 1
+	} else {
+		return result
+	}
 }
 
 // 为编码添加城市索引
