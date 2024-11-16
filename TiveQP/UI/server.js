@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
 
 // 读取文本文件，解析并返回数据
 app.get('/locations', (req, res) => {
-    const filePath = 'E:\\download\\20k.txt'; 
+    const filePath = 'E:\\Github\\TiveQP\\TiveQP\\TiveQP\\Data\\20k.txt'; 
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
             return res.status(500).send('读取文件失败');
