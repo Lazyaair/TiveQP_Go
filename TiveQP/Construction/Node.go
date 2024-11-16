@@ -99,8 +99,12 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 	if err != nil {
 		return fmt.Errorf("Location补集编码失败")
 	}
+	dln.Bits_LCS = make([][]string, len(dln.LCS))
+	dln.HV_LCS = make([][]byte, len(dln.LCS))
 	// 处理location补集！高学长这里并没有插入IBF，是为何！
 	for i := 0; i < len(dln.LCS); i++ {
+		dln.Bits_LCS[i] = make([]string, len(Keylist))
+		dln.HV_LCS[i] = make([]byte, len(Keylist))
 		InsertCS(dln.IBF, dln.LCS[i], dln.Bits_LCS[i], Keylist, dln.HV_LCS[i], rb)
 	}
 
@@ -119,8 +123,12 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 	if err != nil {
 		return fmt.Errorf("Time补集编码失败")
 	}
+	dln.Bits_TCS = make([][]string, len(dln.TCS))
+	dln.HV_TCS = make([][]byte, len(dln.TCS))
 	// 处理Time补集！高学长这里并没有插入IBF，是为何！
 	for i := 0; i < len(dln.TCS); i++ {
+		dln.Bits_TCS[i] = make([]string, len(Keylist))
+		dln.HV_TCS[i] = make([]byte, len(Keylist))
 		InsertCS(dln.IBF, dln.TCS[i], dln.Bits_TCS[i], Keylist, dln.HV_TCS[i], rb)
 	}
 
@@ -154,13 +162,21 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 	dmn.LCS = MergeSet(dmn.Left.LCS, dmn.Right.LCS)
 	dmn.TCS = MergeSet(dmn.Left.TCS, dmn.Right.TCS)
 
+	dmn.Bits_LCS = make([][]string, len(dmn.LCS))
+	dmn.HV_LCS = make([][]byte, len(dmn.LCS))
 	// 处理location补集！高学长这里并没有插入IBF，是为何！
 	for i := 0; i < len(dmn.LCS); i++ {
+		dmn.Bits_LCS[i] = make([]string, len(Keylist))
+		dmn.HV_LCS[i] = make([]byte, len(Keylist))
 		InsertCS(dmn.IBF, dmn.LCS[i], dmn.Bits_LCS[i], Keylist, dmn.HV_LCS[i], rb)
 	}
 
+	dmn.Bits_TCS = make([][]string, len(dmn.TCS))
+	dmn.HV_TCS = make([][]byte, len(dmn.TCS))
 	// 处理Time补集！高学长这里并没有插入IBF，是为何！
 	for i := 0; i < len(dmn.TCS); i++ {
+		dmn.Bits_TCS[i] = make([]string, len(Keylist))
+		dmn.HV_TCS[i] = make([]byte, len(Keylist))
 		InsertCS(dmn.IBF, dmn.TCS[i], dmn.Bits_TCS[i], Keylist, dmn.HV_TCS[i], rb)
 	}
 
@@ -176,12 +192,6 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 
 // 上层叶节点初始化
 func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb int) error {
-	// 合并 IBF
-	uln.IBF = OrIBF(uln.Left.IBF, uln.Right.IBF)
-	// 取补集并集
-	uln.LCS = MergeSet(uln.Left.LCS, uln.Right.LCS)
-	uln.TCS = MergeSet(uln.Left.TCS, uln.Right.TCS)
-
 	// 取 TypeCode
 	typecode, err := indexbuilding.TypeEncoding(typ)
 	if err != nil {
@@ -198,17 +208,12 @@ func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb
 		return fmt.Errorf("TypeCSCoding Error")
 	}
 	// 处理type补集！高学长这里并没有插入IBF，是为何！
+	uln.Bits_YCS = make([][]string, len(uln.YCS))
+	uln.HV_YCS = make([][]byte, len(uln.YCS))
 	for i := 0; i < len(uln.YCS); i++ {
+		uln.Bits_YCS[i] = make([]string, len(Keylist))
+		uln.HV_YCS[i] = make([]byte, len(Keylist))
 		InsertCS(uln.IBF, uln.YCS[i], uln.Bits_YCS[i], Keylist, uln.HV_YCS[i], rb)
-	}
-	// 处理location补集！高学长这里并没有插入IBF，是为何！
-	for i := 0; i < len(uln.LCS); i++ {
-		InsertCS(uln.IBF, uln.LCS[i], uln.Bits_LCS[i], Keylist, uln.HV_LCS[i], rb)
-	}
-
-	// 处理Time补集！高学长这里并没有插入IBF，是为何！
-	for i := 0; i < len(uln.TCS); i++ {
-		InsertCS(uln.IBF, uln.TCS[i], uln.Bits_TCS[i], Keylist, uln.HV_TCS[i], rb)
 	}
 
 	// 计算节点HASH
@@ -219,14 +224,18 @@ func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb
 }
 
 // 上层叶节点初始化
-func (mrn *Node) InitUpMid_RootNode(typ string, ibf_length int, Keylist []string, rb int) error {
+func (mrn *Node) InitUpMid_RootNode(ibf_length int, Keylist []string, rb int) error {
 	// 合并 IBF
 	mrn.IBF = OrIBF(mrn.Left.IBF, mrn.Right.IBF)
 	// 取补集并集
 	mrn.YCS = MergeSet(mrn.Left.LCS, mrn.Right.LCS)
 
 	// 处理type补集！高学长这里并没有插入IBF，是为何！
+	mrn.Bits_YCS = make([][]string, len(mrn.YCS))
+	mrn.HV_YCS = make([][]byte, len(mrn.YCS))
 	for i := 0; i < len(mrn.YCS); i++ {
+		mrn.Bits_YCS[i] = make([]string, len(Keylist))
+		mrn.HV_YCS[i] = make([]byte, len(Keylist))
 		InsertCS(mrn.IBF, mrn.YCS[i], mrn.Bits_YCS[i], Keylist, mrn.HV_YCS[i], rb)
 	}
 
