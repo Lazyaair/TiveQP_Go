@@ -24,14 +24,14 @@ func TestPrefix(t *testing.T) {
 // }
 
 func TestRange(t *testing.T) {
-	fmt.Println(Range(6, 16, 16))
+	fmt.Println(Range(12, 1136, 1182))
 }
 
 // location test
 func TestLocationEncoding(t *testing.T) {
-	cityName := "ATLANTA"
-	lat := 33.7660237
-	lng := -84.5301237
+	cityName := "QUINCY"
+	lat := 42.3328027
+	lng := -71.1389101
 	locationCode, _ := LocationEncoding(cityName, lat, lng)
 	fmt.Println("Code:", locationCode)
 	locationCodeComplement, _ := LocationEncodingComplement(cityName, lat, lng)

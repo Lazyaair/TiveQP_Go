@@ -96,10 +96,20 @@ func Range(bitsize, down, up int) ([]string, error) {
 			result = append(result, strs[0])
 			strs = strs[1:]
 		}
+		// 若只剩一个字符串，则加入result并返回
+		if len(strs) == 1 {
+			result = append(result, strs[0])
+			return result, nil
+		}
 		// 最后一项是否在result中，添加、删除
 		if len(strs)%2 != 0 {
 			result = append(result, strs[len(strs)-1])
 			strs = strs[:len(strs)-1]
+		}
+		// 若只剩一个字符串，则加入result并返回
+		if len(strs) == 1 {
+			result = append(result, strs[0])
+			return result, nil
 		}
 		temp := make([]string, 0, len(strs)/2)
 		for j := 0; j < len(strs)-1; j = j + 2 {
