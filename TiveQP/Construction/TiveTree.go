@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// BuildTreesByChunks 函数用于将owners分为多个小块，每1000个元素建一棵树
+// 将owners分为多个小块，每1000个元素（每个Type）建一棵树
 func BuildTreesByChunks(owners []*indexbuilding.Owner, ibfLength int, Keylist []string, rb int) ([]*Node, error) {
 	var subroots []*Node
 	chunkSize := 1000
@@ -35,7 +35,7 @@ func BuildTreesByChunks(owners []*indexbuilding.Owner, ibfLength int, Keylist []
 				return
 			}
 
-			// 初始化子树的根节点
+			// 初始化子树的根节点（上层叶节点）
 			err = treeRoot.InitUpLeafNode(chunk[0].Type, ibfLength, Keylist, rb)
 			if err != nil {
 				errors <- fmt.Errorf("failed to initialize subroot for chunk %d: %v", idx, err)
@@ -64,7 +64,7 @@ func BuildTreesByChunks(owners []*indexbuilding.Owner, ibfLength int, Keylist []
 	return subroots, nil
 }
 
-// BuildTree 函数构建单棵树
+// 递归根据Type构建下层单棵树
 func BuildTree(owners []*indexbuilding.Owner, ibfLength int, Keylist []string, rb int) (*Node, error) {
 	if len(owners) == 0 {
 		return nil, fmt.Errorf("owners list is empty")
@@ -123,7 +123,8 @@ func BuildTree(owners []*indexbuilding.Owner, ibfLength int, Keylist []string, r
 	return midNode, nil
 }
 
-// CreateFinalTree 函数用于将20个subroot节点再次合并成一棵树
+// 将20个subroot节点再次合并成一棵树
+// 上层数取决于Type个数没必要开协程
 func CreateFinalTree(subroots []*Node, ibfLength int, Keylist []string, rb int) (*Node, error) {
 	// 检查 subroots 的数量
 	if len(subroots) == 0 {
@@ -138,14 +139,12 @@ func CreateFinalTree(subroots []*Node, ibfLength int, Keylist []string, rb int) 
 			if i+1 < len(subroots) {
 				left := subroots[i]
 				right := subroots[i+1]
-
 				// 创建中间节点，并将左右节点合并
 				midNode := &Node{
 					Left:  left,
 					Right: right,
 				}
-
-				// 初始化中间节点
+				// 初始化下层中间节点
 				err := midNode.InitMidNode(ibfLength, Keylist, rb)
 				if err != nil {
 					return nil, fmt.Errorf("failed to initialize mid node: %v", err)
@@ -169,14 +168,14 @@ func CreateFinalTree(subroots []*Node, ibfLength int, Keylist []string, rb int) 
 	return finalRoot, nil
 }
 
-// PreOrderTraversal 实现前序遍历
+// 实现前序遍历
 func (n *Node) PreOrderTraversal(num *int, level int) {
 	if n == nil {
 		return
 	}
 
 	// 访问当前节点（根节点）
-	fmt.Printf("%d节点%d层", *num, level) // 可以根据需要打印其他信息，比如节点的值
+	fmt.Printf("%d节点%d层", *num, level)
 	*num = *num + 1
 	// 递归遍历左子树
 	if n.Left != nil {
