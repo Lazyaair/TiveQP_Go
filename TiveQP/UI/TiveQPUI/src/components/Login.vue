@@ -3,7 +3,7 @@
     <div class="login-box">
       <div class="login-form">
         <h1 class="title">TiveQP</h1>
-        <p class="subtitle">店铺管理系统</p>
+        <p class="subtitle">组4</p>
         
         <el-form 
           ref="formRef"
@@ -109,27 +109,47 @@ const handleLogin = async () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 .login-box {
   width: 400px;
   padding: 40px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  transition: transform 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transform: translateY(0);
+  position: relative;
+  z-index: 1;
 }
 
 .login-box:hover {
   transform: translateY(-5px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
 }
 
 .title {
   text-align: center;
   font-size: 32px;
-  color: #409EFF;
+  background: linear-gradient(135deg, #5b86e5, #36d1dc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   margin: 0 0 8px;
   font-weight: 600;
   letter-spacing: 2px;
@@ -137,9 +157,10 @@ const handleLogin = async () => {
 
 .subtitle {
   text-align: center;
-  color: #909399;
+  color: #5b86e5;
   margin: 0 0 30px;
   font-size: 16px;
+  font-weight: 500;
 }
 
 .form {
@@ -148,12 +169,36 @@ const handleLogin = async () => {
 
 :deep(.el-input__wrapper) {
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
   padding: 8px 15px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  box-shadow: none;
+}
+
+:deep(.el-input__wrapper:hover) {
+  background: rgba(243, 244, 246, 0.9);
+  border-color: rgba(102, 126, 234, 0.1);
 }
 
 :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #409EFF;
+  background: #ffffff;
+  border-color: #667eea;
+  box-shadow: 0 0 0 1px #5b86e5;
+}
+
+:deep(.el-input__inner) {
+  color: #374151;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: #9ca3af;
+}
+
+:deep(.el-input__prefix-inner .el-icon) {
+  color: #667eea;
+  font-size: 18px;
 }
 
 .login-button {
@@ -161,14 +206,31 @@ const handleLogin = async () => {
   height: 44px;
   font-size: 16px;
   margin-top: 20px;
-  background: linear-gradient(135deg, #409EFF 0%, #3a8ee6 100%);
+  background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
   border: none;
-  transition: transform 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .login-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(91, 134, 229, 0.4);
+}
+
+.login-button:active {
+  transform: translateY(0);
+}
+
+.login-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 @media screen and (max-width: 480px) {
@@ -177,5 +239,25 @@ const handleLogin = async () => {
     margin: 0 20px;
     padding: 30px 20px;
   }
+
+  .title {
+    font-size: 32px;
+  }
+}
+
+/* 添加动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-form {
+  animation: fadeIn 0.6s ease-out;
 }
 </style> 

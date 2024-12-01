@@ -101,7 +101,7 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 	}
 	dln.Bits_LCS = make([][]string, len(dln.LCS))
 	dln.HV_LCS = make([][]byte, len(dln.LCS))
-	// 处理location补集！高学长这里并没有插入IBF，是为何！
+	// 处理location补集！
 	for i := 0; i < len(dln.LCS); i++ {
 		dln.Bits_LCS[i] = make([]string, len(Keylist))
 		dln.HV_LCS[i] = make([]byte, len(Keylist))
@@ -125,7 +125,7 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 	}
 	dln.Bits_TCS = make([][]string, len(dln.TCS))
 	dln.HV_TCS = make([][]byte, len(dln.TCS))
-	// 处理Time补集！高学长这里并没有插入IBF，是为何！
+	// 处理Time补集！
 	for i := 0; i < len(dln.TCS); i++ {
 		dln.Bits_TCS[i] = make([]string, len(Keylist))
 		dln.HV_TCS[i] = make([]byte, len(Keylist))
@@ -164,7 +164,7 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 
 	dmn.Bits_LCS = make([][]string, len(dmn.LCS))
 	dmn.HV_LCS = make([][]byte, len(dmn.LCS))
-	// 处理location补集！高学长这里并没有插入IBF，是为何！
+	// 处理location补集！
 	for i := 0; i < len(dmn.LCS); i++ {
 		dmn.Bits_LCS[i] = make([]string, len(Keylist))
 		dmn.HV_LCS[i] = make([]byte, len(Keylist))
@@ -173,7 +173,7 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 
 	dmn.Bits_TCS = make([][]string, len(dmn.TCS))
 	dmn.HV_TCS = make([][]byte, len(dmn.TCS))
-	// 处理Time补集！高学长这里并没有插入IBF，是为何！
+	// 处理Time补集！
 	for i := 0; i < len(dmn.TCS); i++ {
 		dmn.Bits_TCS[i] = make([]string, len(Keylist))
 		dmn.HV_TCS[i] = make([]byte, len(Keylist))
@@ -210,7 +210,7 @@ func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb
 	if err != nil {
 		return fmt.Errorf("TypeCSCoding Error")
 	}
-	// 处理type补集！高学长这里并没有插入IBF，是为何！
+	// 处理type补集！
 	uln.Bits_YCS = make([][]string, len(uln.YCS))
 	uln.HV_YCS = make([][]byte, len(uln.YCS))
 	for i := 0; i < len(uln.YCS); i++ {
@@ -233,7 +233,7 @@ func (mrn *Node) InitUpMid_RootNode(ibf_length int, Keylist []string, rb int) er
 	// 取补集并集
 	mrn.YCS = MergeSet(mrn.Left.LCS, mrn.Right.LCS)
 
-	// 处理type补集！高学长这里并没有插入IBF，是为何！
+	// 处理type补集！
 	mrn.Bits_YCS = make([][]string, len(mrn.YCS))
 	mrn.HV_YCS = make([][]byte, len(mrn.YCS))
 	for i := 0; i < len(mrn.YCS); i++ {

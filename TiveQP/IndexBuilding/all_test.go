@@ -24,7 +24,7 @@ func TestPrefix(t *testing.T) {
 // }
 
 func TestRange(t *testing.T) {
-	fmt.Println(Range(12, 1136, 1182))
+	fmt.Println(Range(6, 24, 47))
 }
 
 // location test

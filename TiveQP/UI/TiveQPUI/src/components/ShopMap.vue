@@ -235,10 +235,12 @@ defineExpose({
   top: 20px;
   width: 350px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   z-index: 1000;
   transition: all 0.3s ease;
 }
@@ -249,13 +251,14 @@ defineExpose({
 
 .panel-header h2 {
   margin: 0 0 8px;
-  color: #303133;
+  color: rgba(48, 49, 51, 0.9);
   font-size: 20px;
+  font-weight: 600;
 }
 
 .stats {
   margin: 0;
-  color: #909399;
+  color: rgba(144, 147, 153, 0.9);
   font-size: 14px;
 }
 
@@ -264,7 +267,14 @@ defineExpose({
 }
 
 :deep(.el-input__wrapper) {
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.5);
 }
 
 .filter-form {
@@ -281,8 +291,38 @@ defineExpose({
   gap: 8px;
 }
 
+.time-range .el-select {
+  flex: 1;
+  min-width: 120px;
+}
+
+:deep(.el-select__wrapper) {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+:deep(.el-select__selection) {
+  padding: 0 4px;
+}
+
+:deep(.el-select__input) {
+  margin: 0;
+  padding: 0;
+}
+
+:deep(.el-select__placeholder) {
+  padding: 0 4px;
+}
+
 .time-separator {
-  color: #909399;
+  color: rgba(144, 147, 153, 0.9);
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+:deep(.el-select-dropdown__list) {
+  min-width: 120px;
 }
 
 .map-controls {
@@ -293,8 +333,16 @@ defineExpose({
 }
 
 :deep(.el-button) {
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(64, 158, 255, 0.9);
+  border: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+:deep(.el-button:hover) {
+  background: rgba(64, 158, 255, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
 }
 
 #map {
@@ -322,10 +370,173 @@ defineExpose({
   color: #606266;
 }
 
+/* 折叠面板样式 */
+:deep(.el-collapse) {
+  border: none;
+  background: transparent;
+}
+
+:deep(.el-collapse-item__header) {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(48, 49, 51, 0.9);
+}
+
+:deep(.el-collapse-item__content) {
+  background: transparent;
+  color: rgba(48, 49, 51, 0.9);
+}
+
+:deep(.el-form-item__label) {
+  color: rgba(48, 49, 51, 0.9);
+}
+
+/* 响应式设计 */
 @media screen and (max-width: 768px) {
   .search-panel {
     width: calc(100% - 40px);
     margin: 0 20px;
+  }
+
+  .time-range {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .time-range .el-select {
+    width: 100%;
+  }
+
+  .time-separator {
+    display: none;
+  }
+}
+
+/* 表单样式 */
+:deep(.filter-form) {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 表单项样式 */
+:deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+:deep(.el-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.el-form-item__label) {
+  color: rgba(48, 49, 51, 0.9);
+  font-weight: 500;
+  padding-bottom: 4px;
+}
+
+/* Select 下拉框样式 */
+:deep(.el-select .el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+}
+
+:deep(.el-select .el-input__wrapper:hover) {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:deep(.el-select .el-input__wrapper.is-focus) {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.5);
+}
+
+/* 下拉选项样式 */
+:deep(.el-select-dropdown) {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.el-select-dropdown__item) {
+  background: transparent;
+}
+
+:deep(.el-select-dropdown__item.hover) {
+  background: rgba(64, 158, 255, 0.1);
+}
+
+:deep(.el-select-dropdown__item.selected) {
+  background: rgba(64, 158, 255, 0.2);
+  color: #409EFF;
+}
+
+/* 时间选择器样式 */
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-range .el-select {
+  flex: 1;
+  min-width: 120px;
+}
+
+:deep(.el-select__selection) {
+  background: transparent;
+}
+
+:deep(.el-select__placeholder) {
+  color: rgba(128, 128, 128, 0.8);
+}
+
+/* 折叠面板样式 */
+:deep(.el-collapse-item__header) {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0 16px;
+  height: 48px;
+  line-height: 48px;
+  color: rgba(48, 49, 51, 0.9);
+  font-weight: 500;
+}
+
+:deep(.el-collapse-item__header:hover) {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:deep(.el-collapse-item__wrap) {
+  background: transparent;
+  border: none;
+}
+
+:deep(.el-collapse-item__content) {
+  padding: 16px 0 0;
+}
+
+/* 响应式设计 */
+@media screen and (max-width: 768px) {
+  .time-range {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .time-range .el-select {
+    width: 100%;
+  }
+
+  .time-separator {
+    display: none;
   }
 }
 </style>
