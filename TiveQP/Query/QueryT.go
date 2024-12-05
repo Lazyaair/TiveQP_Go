@@ -27,3 +27,37 @@ package query
 // Verification time: 359623
 // proof size ：
 // 13948
+import (
+	construction "TiveQP/Construction"
+	trapdoor "TiveQP/Trapdoor"
+)
+
+func QueryT(root *construction.Node, td *trapdoor.T, k *int) {
+	if root == nil {
+		return
+	}
+	if *k == 0 {
+		return
+	}
+
+	// 判断根节点的左子节点是否符合条件P
+	if root.Left != nil && check(root.Left, td) {
+		// 如果左子节点符合条件P，继续判断左子节点的左子节点
+		QueryT(root.Left, td, k)
+	} else {
+		// 如果左子节点不符合条件P，判断根的右子节点
+		if root.Right != nil {
+			QueryT(root.Right, td, k)
+		}
+	}
+}
+
+func check(root *construction.Node, t *trapdoor.T) bool {
+	if root.YCS != nil {
+		// 只关 T1
+		return true
+	} else {
+		// 只关 T2+T3
+		return true
+	}
+}

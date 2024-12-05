@@ -84,9 +84,10 @@ func TestBuildTree(t *testing.T) {
 	} else {
 		fmt.Println("Final tree created successfully!")
 	}
-	number := 0
-	level := 0
-	finalRoot.PreOrderTraversal(&number, level)
+	_ = finalRoot
+	// number := 0
+	// level := 0
+	// finalRoot.PreOrderTraversal(&number, level)
 }
 
 func TestEncDec(t *testing.T) {

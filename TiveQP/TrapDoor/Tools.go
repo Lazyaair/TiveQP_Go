@@ -2,14 +2,9 @@ package trapdoor
 
 import (
 	indexbuilding "TiveQP/IndexBuilding"
-	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 )
@@ -23,46 +18,6 @@ func HMACSHA256(message, secret []byte) []byte {
 func HashSHA256(data []byte) []byte {
 	hash := sha256.Sum256(data)
 	return hash[:]
-}
-
-func Encrypt(plainText, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	blockSize := block.BlockSize()
-	padding := blockSize - len(plainText)%blockSize
-	paddedText := append(plainText, bytes.Repeat([]byte{byte(padding)}, padding)...)
-	ciphertext := make([]byte, len(paddedText))
-	iv := make([]byte, blockSize)
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
-	}
-	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(ciphertext, paddedText)
-	return append(iv, ciphertext...), nil
-}
-
-func Decrypt(cipherText, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	blockSize := block.BlockSize()
-	if len(cipherText) < blockSize {
-		return nil, fmt.Errorf("ciphertext too short")
-	}
-	iv := cipherText[:blockSize]
-	ciphertext := cipherText[blockSize:]
-	plaintext := make([]byte, len(ciphertext))
-	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(plaintext, ciphertext)
-	padding := int(plaintext[len(plaintext)-1])
-	if padding > len(plaintext) || padding > blockSize {
-		return nil, fmt.Errorf("invalid padding")
-	}
-	plaintext = plaintext[:len(plaintext)-padding]
-	return plaintext, nil
 }
 
 // ParseUser 解析每一行并创建 Owner 对象

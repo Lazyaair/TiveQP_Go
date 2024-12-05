@@ -195,6 +195,19 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 
 // 上层叶节点初始化
 func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb int) error {
+	// 上层叶节点生成 BuildTree 会调用 InitMidNode 初始化
+	// if uln.Bits_LCS != nil && uln.Bits_TCS != nil && uln.HV_LCS != nil && uln.HV_TCS != nil && uln.LCS != nil && uln.TCS != nil {
+	// 	fmt.Println(true)
+	// }
+	// 非所需初始化，清空当前内容
+	uln.IBF = NewTwinBitArray(ibf_length)
+	uln.LCS = nil
+	uln.Bits_LCS = nil
+	uln.HV_LCS = nil
+	uln.TCS = nil
+	uln.Bits_TCS = nil
+	uln.HV_TCS = nil
+
 	// 取 TypeCode
 	typecode, err := indexbuilding.TypeEncoding(typ)
 	if err != nil {
@@ -226,7 +239,7 @@ func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb
 	return nil
 }
 
-// 上层叶节点初始化
+// 上层中间和根节点初始化
 func (mrn *Node) InitUpMid_RootNode(ibf_length int, Keylist []string, rb int) error {
 	// 合并 IBF
 	mrn.IBF = OrIBF(mrn.Left.IBF, mrn.Right.IBF)
@@ -246,6 +259,8 @@ func (mrn *Node) InitUpMid_RootNode(ibf_length int, Keylist []string, rb int) er
 	mrn.HV = HashSHA256(append(mrn.Left.HV, mrn.Right.HV...))
 	// 无关字段
 	mrn.Owner = nil
+	mrn.LCS = nil
+	mrn.TCS = nil
 	mrn.Bits_LCS = nil
 	mrn.Bits_TCS = nil
 	mrn.HV_LCS = nil

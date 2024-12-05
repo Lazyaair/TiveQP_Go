@@ -17,13 +17,19 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	for index, trapdoor := range T {
+	Ts := []interface{}{T.T1, T.T2, T.T3}
+	for index, trapdoor := range Ts {
 		fmt.Println("T", index+1, ":")
-		for _, v1 := range trapdoor {
-			for _, v2 := range v1 {
-				fmt.Print(v2, "||")
+		// 对 trapdoor 进行类型断言，确保它是 [][]string 类型
+		if td, ok := trapdoor.([][]string); ok {
+			for _, v1 := range td {
+				for _, v2 := range v1 {
+					fmt.Print(v2, "||")
+				}
+				fmt.Println()
 			}
-			fmt.Println()
+		} else {
+			fmt.Println("Invalid type")
 		}
 		fmt.Println("=============")
 	}

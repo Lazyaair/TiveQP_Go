@@ -140,16 +140,16 @@ func CreateFinalTree(subroots []*Node, ibfLength int, Keylist []string, rb int) 
 				left := subroots[i]
 				right := subroots[i+1]
 				// 创建中间节点，并将左右节点合并
-				midNode := &Node{
+				upMidNode := &Node{
 					Left:  left,
 					Right: right,
 				}
-				// 初始化下层中间节点
-				err := midNode.InitMidNode(ibfLength, Keylist, rb)
+				// 初始化中间节点
+				err := upMidNode.InitUpMid_RootNode(ibfLength, Keylist, rb)
 				if err != nil {
 					return nil, fmt.Errorf("failed to initialize mid node: %v", err)
 				}
-				nextLevel = append(nextLevel, midNode)
+				nextLevel = append(nextLevel, upMidNode)
 			} else {
 				nextLevel = append(nextLevel, subroots[i])
 			}
