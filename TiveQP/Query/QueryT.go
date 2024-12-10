@@ -29,35 +29,115 @@ package query
 // 13948
 import (
 	construction "TiveQP/Construction"
-	trapdoor "TiveQP/Trapdoor"
+	trapdoor "TiveQP/TrapDoor"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"math/big"
+	"strings"
 )
 
-func QueryT(root *construction.Node, td *trapdoor.T, k *int) {
+func QueryT(root *construction.Node, td *trapdoor.T, k *int, rb int, result *[]*construction.Node) {
+	// root.Print()
+	// 空节点
 	if root == nil {
 		return
 	}
+	// k 个查询结束 UNN
 	if *k == 0 {
 		return
 	}
-
-	// 判断根节点的左子节点是否符合条件P
-	if root.Left != nil && check(root.Left, td) {
-		// 如果左子节点符合条件P，继续判断左子节点的左子节点
-		QueryT(root.Left, td, k)
-	} else {
-		// 如果左子节点不符合条件P，判断根的右子节点
-		if root.Right != nil {
-			QueryT(root.Right, td, k)
-		}
+	// UMN
+	if !check(root, td, rb) {
+		return
 	}
+	// leafNode == MLN
+	if root.Left == nil && root.Right == nil {
+		fmt.Println("k=", *k)
+		root.Print()
+		fmt.Println("=========================================================================================================================")
+		*k -= 1
+		*result = append(*result, root)
+		return
+	}
+
+	if root.Left != nil {
+		QueryT(root.Left, td, k, rb, result)
+	}
+	if root.Right != nil {
+		QueryT(root.Right, td, k, rb, result)
+	}
+
 }
 
-func check(root *construction.Node, t *trapdoor.T) bool {
+func check(root *construction.Node, t *trapdoor.T, rb int) bool {
 	if root.YCS != nil {
 		// 只关 T1
+		for _, rowVal := range t.T1 {
+			for _, val := range rowVal {
+				row, col := ParseIndex(val, root.IBF.Cols, rb)
+				if !root.IBF.Get(row, col) {
+					return false
+				}
+			}
+			// if count == len(rowVal) {
+			// 	return true
+			// }
+		}
 		return true
 	} else {
 		// 只关 T2+T3
-		return true
+		flag := false
+		count := 0
+		for _, rowVal := range t.T2 {
+			for _, val := range rowVal {
+				row, col := ParseIndex(val, root.IBF.Cols, rb)
+				if root.IBF.Get(row, col) {
+					count++
+				}
+			}
+			if count == len(rowVal) {
+				flag = true
+				count = 0
+				break
+			}
+		}
+		if flag {
+			for _, rowVal := range t.T3 {
+				for _, val := range rowVal {
+					row, col := ParseIndex(val, root.IBF.Cols, rb)
+					if root.IBF.Get(row, col) {
+						count++
+					}
+				}
+				if count == len(rowVal) {
+					return true
+				}
+			}
+		}
 	}
+	return false
+}
+
+func ParseIndex(str string, ibf_len, rb int) (_, _ int) {
+	h := strings.Split(str, ",")
+	// h[0]:outbytes,h[1]:hkp1
+	outbytes, err := hex.DecodeString(h[0])
+	if err != nil {
+		fmt.Println("err:", err)
+		return -1, -1
+	}
+	hkp1, err := hex.DecodeString(h[1])
+	if err != nil {
+		fmt.Println("err:", err)
+		return -1, -1
+	}
+
+	bi := new(big.Int).SetBytes(outbytes)
+	col := bi.Mod(bi, big.NewInt(int64(ibf_len))).Int64() // twin_id
+
+	hkp1bi := new(big.Int).SetBytes(hkp1)
+	sha1bytes := sha256.Sum256(hkp1bi.Xor(hkp1bi, big.NewInt(int64(rb))).Bytes())
+	row := new(big.Int).SetBytes(sha1bytes[:]).Mod(new(big.Int).SetBytes(sha1bytes[:]), big.NewInt(2)).Int64()
+	return int(row), int(col)
 }

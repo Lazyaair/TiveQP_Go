@@ -58,12 +58,12 @@ func MergeSet(slice1, slice2 []string) []string {
 // Or 执行两个位数组的按位或运算，返回结果位数组
 func OrIBF(a, b *TwinBitArray) *TwinBitArray {
 	// 检查两者的列数是否相同
-	if a.cols != b.cols {
+	if a.Cols != b.Cols {
 		panic("列数不一致！")
 	}
 
 	// 创建一个新的 TwinBitArray 作为结果
-	result := NewTwinBitArray(a.cols)
+	result := NewTwinBitArray(a.Cols)
 
 	// 对两行数据执行 OR 操作
 	for i := 0; i < 2; i++ { // 两行
@@ -82,7 +82,7 @@ func Insert(twinlist *TwinBitArray, data string, keylist []string, rb int) error
 		// 计算 HMAC(w, k_i)
 		outbytes := HMACSHA256([]byte(data), []byte(keylist[i]))
 		bi := new(big.Int).SetBytes(outbytes)
-		twinIndex := bi.Mod(bi, big.NewInt(int64(twinlist.cols))).Int64() // twin_id
+		twinIndex := bi.Mod(bi, big.NewInt(int64(twinlist.Cols))).Int64() // twin_id
 
 		// 计算 (h_k+1)
 		hkp1 := HashSHA256(append(outbytes, []byte(keylist[len(keylist)-1])...))
@@ -105,13 +105,13 @@ func Insert(twinlist *TwinBitArray, data string, keylist []string, rb int) error
 }
 
 // 对补集的处理(记录在节点属性中)
-func InsertCS(twinlist *TwinBitArray, data string, bit_CS_i, keylist []string, hv_cs []byte, rb int) error {
+func InsertCS(twinlist *TwinBitArray, data string, bit_CS_i *[]string, keylist []string, hv_cs *[]byte, rb int) error {
 	// 循环计算每个 key 对应的位置
 	for i := 0; i < len(keylist)-1; i++ {
 		// 计算 HMAC(w, k_i)
 		outbytes := HMACSHA256([]byte(data), []byte(keylist[i]))
 		bi := new(big.Int).SetBytes(outbytes)
-		twinIndex := bi.Mod(bi, big.NewInt(int64(twinlist.cols))).Int64() // twin_id
+		twinIndex := bi.Mod(bi, big.NewInt(int64(twinlist.Cols))).Int64() // twin_id
 
 		// 计算 (h_k+1)
 		hkp1 := HashSHA256(append(outbytes, []byte(keylist[len(keylist)-1])...))
@@ -125,13 +125,13 @@ func InsertCS(twinlist *TwinBitArray, data string, bit_CS_i, keylist []string, h
 		if location == 0 {
 			// twinlist.Set(0, int(twinIndex), true)  // Set bit to 1 for twinlist[0][twinIndex]
 			// twinlist.Set(1, int(twinIndex), false) // Set bit to 0 for twinlist[1][twinIndex]
-			bit_CS_i = append(bit_CS_i, strconv.FormatInt(twinIndex, 10)+"|"+strconv.Itoa(1))
-			hv_cs = append(hv_cs, HMACSHA256([]byte(bit_CS_i[i]), []byte(keylist[i]))...)
+			*bit_CS_i = append(*bit_CS_i, strconv.FormatInt(twinIndex, 10)+"|"+strconv.Itoa(1))
+			*hv_cs = append(*hv_cs, HMACSHA256([]byte((*bit_CS_i)[i]), []byte(keylist[i]))...)
 		} else {
 			// twinlist.Set(1, int(twinIndex), true)  // Set bit to 1 for twinlist[1][twinIndex]
 			// twinlist.Set(0, int(twinIndex), false) // Set bit to 0 for twinlist[0][twinIndex]
-			bit_CS_i = append(bit_CS_i, strconv.FormatInt(twinIndex, 10)+"|"+strconv.Itoa(0))
-			hv_cs = append(hv_cs, HMACSHA256([]byte(bit_CS_i[i]), []byte(keylist[i]))...)
+			*bit_CS_i = append(*bit_CS_i, strconv.FormatInt(twinIndex, 10)+"|"+strconv.Itoa(0))
+			*hv_cs = append(*hv_cs, HMACSHA256([]byte((*bit_CS_i)[i]), []byte(keylist[i]))...)
 		}
 	}
 	return nil

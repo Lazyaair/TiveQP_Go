@@ -21,7 +21,7 @@ func TimeRangeEncoding(hour_start, min_start, hour_end, min_end int) ([]string, 
 		time_start++
 	}
 	// [8:00-12:00]===>[16,17,...,22,23]==[2*i,2*j-1]
-	time_end := hour_end*2 - 1
+	time_end := hour_end * 2
 	if min_end >= 30 {
 		time_end++
 	}
@@ -34,7 +34,7 @@ func TimeRangeEncodingComplement(hour_start, min_start, hour_end, min_end int) (
 	if min_start >= 30 {
 		time_start++
 	}
-	time_end := hour_end*2 - 1
+	time_end := hour_end * 2
 	if min_end >= 30 {
 		time_end++
 	}
@@ -45,9 +45,13 @@ func TimeRangeEncodingComplement(hour_start, min_start, hour_end, min_end int) (
 		f1, _ := Range(6, 0, time_start-1)
 		result = append(result, f1...)
 	}
-	if time_end != 47 {
-		f2, _ := Range(6, time_end+1, 47)
+	if time_start+1 < time_end {
+		f2, _ := Range(6, time_start+1, time_end-1)
 		result = append(result, f2...)
+	}
+	if time_end != 47 {
+		f3, _ := Range(6, time_end+1, 47)
+		result = append(result, f3...)
 	}
 	return result, nil
 }

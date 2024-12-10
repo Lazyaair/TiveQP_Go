@@ -37,6 +37,7 @@ func BuildTreesByChunks(owners []*indexbuilding.Owner, ibfLength int, Keylist []
 
 			// 初始化子树的根节点（上层叶节点）
 			err = treeRoot.InitUpLeafNode(chunk[0].Type, ibfLength, Keylist, rb)
+			// fmt.Println(chunk[0].Type)
 			if err != nil {
 				errors <- fmt.Errorf("failed to initialize subroot for chunk %d: %v", idx, err)
 				return
@@ -126,6 +127,7 @@ func BuildTree(owners []*indexbuilding.Owner, ibfLength int, Keylist []string, r
 // 将20个subroot节点再次合并成一棵树
 // 上层数取决于Type个数没必要开协程
 func CreateFinalTree(subroots []*Node, ibfLength int, Keylist []string, rb int) (*Node, error) {
+	// kn := 0
 	// 检查 subroots 的数量
 	if len(subroots) == 0 {
 		return nil, fmt.Errorf("subroots list is empty")
@@ -146,6 +148,9 @@ func CreateFinalTree(subroots []*Node, ibfLength int, Keylist []string, rb int) 
 				}
 				// 初始化中间节点
 				err := upMidNode.InitUpMid_RootNode(ibfLength, Keylist, rb)
+				// typslice := strings.Join(upMidNode.Typ, ",")
+				// fmt.Println("num:", kn, "type:", typslice)
+				// kn += 1
 				if err != nil {
 					return nil, fmt.Errorf("failed to initialize mid node: %v", err)
 				}

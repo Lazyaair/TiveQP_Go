@@ -17,7 +17,8 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	Ts := []interface{}{T.T1, T.T2, T.T3}
+	// Ts := []interface{}{T.T1, T.T2, T.T3}
+	Ts := []interface{}{T.T1}
 	for index, trapdoor := range Ts {
 		fmt.Println("T", index+1, ":")
 		// 对 trapdoor 进行类型断言，确保它是 [][]string 类型

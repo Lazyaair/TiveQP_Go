@@ -4,12 +4,13 @@ import (
 	indexbuilding "TiveQP/IndexBuilding"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // TwinBitArray 表示一个基于 []uint64 的位数组，用来表示IBF
 type TwinBitArray struct {
 	data [2][]uint64 // 固定为 2 行，每行是一个 uint64 数组
-	cols int         // 每行的位数
+	Cols int         // 每行的位数
 }
 
 // NewBitArray 创建指定大小的位数组
@@ -19,7 +20,7 @@ func NewTwinBitArray(cols int) *TwinBitArray {
 
 	// 初始化数据
 	tba := &TwinBitArray{
-		cols: cols,
+		Cols: cols,
 	}
 
 	// 为两行分别分配空间
@@ -32,7 +33,7 @@ func NewTwinBitArray(cols int) *TwinBitArray {
 
 // Set 设置位数组中的某一位
 func (t *TwinBitArray) Set(row, col int, value bool) {
-	if row < 0 || row >= 2 || col < 0 || col >= t.cols {
+	if row < 0 || row >= 2 || col < 0 || col >= t.Cols {
 		panic("index out of bounds")
 	}
 	uint64Index := col / 64 // 计算对应的 uint64 索引
@@ -47,7 +48,7 @@ func (t *TwinBitArray) Set(row, col int, value bool) {
 
 // Get 获取位数组中的某一位
 func (t *TwinBitArray) Get(row, col int) bool {
-	if row < 0 || row >= 2 || col < 0 || col >= t.cols {
+	if row < 0 || row >= 2 || col < 0 || col >= t.Cols {
 		panic("index out of bounds")
 	}
 	uint64Index := col / 64 // 计算对应的 uint64 索引
@@ -58,6 +59,11 @@ func (t *TwinBitArray) Get(row, col int) bool {
 
 // Node 表示树的节点
 type Node struct {
+	// ==== 测试字段 =====
+	Typ []string
+
+	// ==== 测试字段 ====
+
 	Owner *indexbuilding.Owner
 	// IBF
 	IBF *TwinBitArray
@@ -78,6 +84,11 @@ type Node struct {
 	// 子节点
 	Left  *Node
 	Right *Node
+}
+
+func (n *Node) Print() {
+	typslice := strings.Join(n.Typ, ",")
+	fmt.Println("Type:", typslice, "Owner:", n.Owner)
 }
 
 // 下层叶节点初始化
@@ -105,7 +116,7 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 	for i := 0; i < len(dln.LCS); i++ {
 		dln.Bits_LCS[i] = make([]string, len(Keylist))
 		dln.HV_LCS[i] = make([]byte, len(Keylist))
-		InsertCS(dln.IBF, dln.LCS[i], dln.Bits_LCS[i], Keylist, dln.HV_LCS[i], rb)
+		InsertCS(dln.IBF, dln.LCS[i], &dln.Bits_LCS[i], Keylist, &dln.HV_LCS[i], rb)
 	}
 
 	// 关于 Time
@@ -129,7 +140,7 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 	for i := 0; i < len(dln.TCS); i++ {
 		dln.Bits_TCS[i] = make([]string, len(Keylist))
 		dln.HV_TCS[i] = make([]byte, len(Keylist))
-		InsertCS(dln.IBF, dln.TCS[i], dln.Bits_TCS[i], Keylist, dln.HV_TCS[i], rb)
+		InsertCS(dln.IBF, dln.TCS[i], &dln.Bits_TCS[i], Keylist, &dln.HV_TCS[i], rb)
 	}
 
 	// 计算节点HASH
@@ -168,7 +179,7 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 	for i := 0; i < len(dmn.LCS); i++ {
 		dmn.Bits_LCS[i] = make([]string, len(Keylist))
 		dmn.HV_LCS[i] = make([]byte, len(Keylist))
-		InsertCS(dmn.IBF, dmn.LCS[i], dmn.Bits_LCS[i], Keylist, dmn.HV_LCS[i], rb)
+		InsertCS(dmn.IBF, dmn.LCS[i], &dmn.Bits_LCS[i], Keylist, &dmn.HV_LCS[i], rb)
 	}
 
 	dmn.Bits_TCS = make([][]string, len(dmn.TCS))
@@ -177,7 +188,7 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 	for i := 0; i < len(dmn.TCS); i++ {
 		dmn.Bits_TCS[i] = make([]string, len(Keylist))
 		dmn.HV_TCS[i] = make([]byte, len(Keylist))
-		err := InsertCS(dmn.IBF, dmn.TCS[i], dmn.Bits_TCS[i], Keylist, dmn.HV_TCS[i], rb)
+		err := InsertCS(dmn.IBF, dmn.TCS[i], &dmn.Bits_TCS[i], Keylist, &dmn.HV_TCS[i], rb)
 		if err != nil {
 			return fmt.Errorf("IBF:%v,TCS:%v,BITTCS:%v", dmn.IBF, dmn.TCS[i], dmn.Bits_TCS[i])
 		}
@@ -208,6 +219,7 @@ func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb
 	uln.Bits_TCS = nil
 	uln.HV_TCS = nil
 
+	uln.Typ = append(uln.Typ, typ)
 	// 取 TypeCode
 	typecode, err := indexbuilding.TypeEncoding(typ)
 	if err != nil {
@@ -229,7 +241,7 @@ func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb
 	for i := 0; i < len(uln.YCS); i++ {
 		uln.Bits_YCS[i] = make([]string, len(Keylist))
 		uln.HV_YCS[i] = make([]byte, len(Keylist))
-		InsertCS(uln.IBF, uln.YCS[i], uln.Bits_YCS[i], Keylist, uln.HV_YCS[i], rb)
+		InsertCS(uln.IBF, uln.YCS[i], &uln.Bits_YCS[i], Keylist, &uln.HV_YCS[i], rb)
 	}
 
 	// 计算节点HASH
@@ -244,15 +256,15 @@ func (mrn *Node) InitUpMid_RootNode(ibf_length int, Keylist []string, rb int) er
 	// 合并 IBF
 	mrn.IBF = OrIBF(mrn.Left.IBF, mrn.Right.IBF)
 	// 取补集并集
-	mrn.YCS = MergeSet(mrn.Left.LCS, mrn.Right.LCS)
-
+	mrn.YCS = MergeSet(mrn.Left.YCS, mrn.Right.YCS)
+	mrn.Typ = MergeSet(mrn.Left.Typ, mrn.Right.Typ)
 	// 处理type补集！
 	mrn.Bits_YCS = make([][]string, len(mrn.YCS))
 	mrn.HV_YCS = make([][]byte, len(mrn.YCS))
 	for i := 0; i < len(mrn.YCS); i++ {
 		mrn.Bits_YCS[i] = make([]string, len(Keylist))
 		mrn.HV_YCS[i] = make([]byte, len(Keylist))
-		InsertCS(mrn.IBF, mrn.YCS[i], mrn.Bits_YCS[i], Keylist, mrn.HV_YCS[i], rb)
+		InsertCS(mrn.IBF, mrn.YCS[i], &mrn.Bits_YCS[i], Keylist, &mrn.HV_YCS[i], rb)
 	}
 
 	// 计算节点HASH
@@ -260,7 +272,7 @@ func (mrn *Node) InitUpMid_RootNode(ibf_length int, Keylist []string, rb int) er
 	// 无关字段
 	mrn.Owner = nil
 	mrn.LCS = nil
-	mrn.TCS = nil
+	mrn.LCS = nil
 	mrn.Bits_LCS = nil
 	mrn.Bits_TCS = nil
 	mrn.HV_LCS = nil

@@ -18,9 +18,9 @@ func GenT(u *indexbuilding.User, keylist []string, rd int) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	t1 := make([][]string, len(type_prefix)-1)
+	t1 := make([][]string, len(type_prefix))
 	for i := 0; i < len(t1); i++ {
-		t1[i] = make([]string, len(keylist))
+		t1[i] = make([]string, len(keylist)-1)
 		for j := 0; j < len(keylist)-1; j++ {
 			outbytes := HMACSHA256([]byte(type_prefix[i]), []byte(keylist[j]))
 			hkp1 := HashSHA256(append(outbytes, []byte(keylist[len(keylist)-1])...))
