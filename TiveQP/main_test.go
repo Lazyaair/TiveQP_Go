@@ -34,29 +34,47 @@ func TestMain(t *testing.T) {
 
 	// "Fast Food**AUSTIN**30.2795878**-97.806248**12**12"
 	// Restaurants**ATLANTA**33.846335**-84.3635778**12**12
+	// Shopping**AUSTIN**30.3575044**-97.7321061**10**0**19**0
 	u, err := trapdoor.ParseUser("Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("User loaded successfully!")
+		fmt.Println("User loaded successfully!==Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
 	}
 	T, err := trapdoor.GenT(u, Keylist, rb)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("TrapDoor created successfully!")
+		fmt.Println("TrapDoor created successfully!==Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
+	}
+	u1, err := trapdoor.ParseUser("Shopping**AUSTIN**30.3575044**-97.7321061**11**11")
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("User loaded successfully!==Shopping**AUSTIN**30.3575044**-97.7321061**11**11")
+	}
+	T1, err := trapdoor.GenT(u1, Keylist, rb)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("TrapDoor created successfully!==Shopping**AUSTIN**30.3575044**-97.7321061**11**11")
 	}
 
-	fmt.Println("Query begin!")
-	k := 50
+	fmt.Println("Query begin!===Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
+	k := 10
 	result := make([]*construction.Node, 0, k)
 	query.QueryT(finalRoot, T, &k, rb, &result)
-	fmt.Println("Query ended!")
+	fmt.Println("Query ended!===Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
 
-	for _, v := range result {
-		print(v)
-		// fmt.Println("\n========================================")
-	}
+	fmt.Println("Query begin!===Shopping**AUSTIN**30.3575044**-97.7321061**11**11")
+	k1 := 10
+	result1 := make([]*construction.Node, 0, k1)
+	query.QueryT(finalRoot, T1, &k1, rb, &result1)
+	fmt.Println("Query ended!===Shopping**AUSTIN**30.3575044**-97.7321061**11**11")
+	// for _, v := range result {
+	// 	print(v)
+	// 	// fmt.Println("\n========================================")
+	// }
 	// number := 0
 	// level := 0
 	// finalRoot.PreOrderTraversal(&number, level)
