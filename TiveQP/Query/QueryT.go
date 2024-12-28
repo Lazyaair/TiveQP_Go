@@ -37,7 +37,7 @@ import (
 	"strings"
 )
 
-func QueryT(root *construction.Node, td *trapdoor.T, k *int, rb int, result *[]*construction.Node) {
+func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int, result *[]*construction.Node, pi *[]*PON) {
 	// root.Print()
 	// 空节点
 	if root == nil {
@@ -45,27 +45,47 @@ func QueryT(root *construction.Node, td *trapdoor.T, k *int, rb int, result *[]*
 	}
 	// k 个查询结束 UNN
 	if *k == 0 {
+		poof := &PON{
+			HV:     root.HV,
+			Height: height,
+			Typ:    "UNN",
+		}
+		*pi = append(*pi, poof)
+		fmt.Println("UNN height=", height)
 		return
 	}
 	// UMN
 	if !check(root, td, rb) {
+		poof := &PON{
+			HV:     root.HV,
+			Height: height,
+			Typ:    "UMN",
+		}
+		*pi = append(*pi, poof)
+		fmt.Println("UMN height=", height)
 		return
 	}
 	// leafNode == MLN
 	if root.Left == nil && root.Right == nil {
-		fmt.Println("k=", *k)
-		root.Print()
+		fmt.Println("k=", *k, "height=", height)
+		//root.Print()
 		fmt.Println("=========================================================================================================================")
 		*k -= 1
 		*result = append(*result, root)
+		poof := &PON{
+			HV:     root.HV,
+			Height: height,
+			Typ:    "MLN",
+		}
+		*pi = append(*pi, poof)
 		return
 	}
 
 	if root.Left != nil {
-		QueryT(root.Left, td, k, rb, result)
+		QueryT(root.Left, td, k, height+1, rb, result, pi)
 	}
 	if root.Right != nil {
-		QueryT(root.Right, td, k, rb, result)
+		QueryT(root.Right, td, k, height+1, rb, result, pi)
 	}
 
 }
