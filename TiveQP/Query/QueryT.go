@@ -67,9 +67,8 @@ func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int,
 	}
 	// leafNode == MLN
 	if root.Left == nil && root.Right == nil {
-		fmt.Println("k=", *k, "height=", height)
+		fmt.Println("k=", *k, "height=", height, "<=================================================")
 		//root.Print()
-		fmt.Println("=========================================================================================================================")
 		*k -= 1
 		*result = append(*result, root)
 		poof := &PON{
