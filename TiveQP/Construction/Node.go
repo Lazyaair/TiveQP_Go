@@ -81,6 +81,8 @@ type Node struct {
 	HV_YCS [][]byte
 	// 原始数据的摘要
 	HV []byte
+	// 密文
+	Cipher []byte
 	// 子节点
 	Left  *Node
 	Right *Node
@@ -152,6 +154,7 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 		"**" + strconv.Itoa(owner.HourClose) +
 		"**" + strconv.Itoa(owner.MinClose)
 	ciphertext, err := Encrypt([]byte(dataText), []byte("2bc73dw20ebf4d46"))
+	dln.Cipher = ciphertext
 	if err != nil {
 		return fmt.Errorf("加密失败")
 	}
@@ -201,6 +204,7 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 	dmn.Bits_YCS = nil
 	dmn.HV_YCS = nil
 	dmn.Owner = nil
+	dmn.Cipher = nil
 	return nil
 }
 
@@ -218,6 +222,7 @@ func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb
 	uln.TCS = nil
 	uln.Bits_TCS = nil
 	uln.HV_TCS = nil
+	uln.Cipher = nil
 
 	uln.Typ = append(uln.Typ, typ)
 	// 取 TypeCode
@@ -277,5 +282,6 @@ func (mrn *Node) InitUpMid_RootNode(ibf_length int, Keylist []string, rb int) er
 	mrn.Bits_TCS = nil
 	mrn.HV_LCS = nil
 	mrn.HV_TCS = nil
+	mrn.Cipher = nil
 	return nil
 }

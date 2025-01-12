@@ -37,7 +37,7 @@ import (
 	"strings"
 )
 
-func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int, result *[]*construction.Node, pi *[]*PON) {
+func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int, result *[]*[]byte, pi *[]*PON) {
 	// root.Print()
 	// 空节点
 	if root == nil {
@@ -70,7 +70,7 @@ func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int,
 		fmt.Println("k=", *k, "height=", height, "<=================================================")
 		//root.Print()
 		*k -= 1
-		*result = append(*result, root)
+		*result = append(*result, &root.Cipher)
 		poof := &PON{
 			HV:     root.HV,
 			Height: height,
