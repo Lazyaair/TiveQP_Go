@@ -4,7 +4,7 @@ import (
 	construction "TiveQP/Construction"
 	query "TiveQP/Query"
 	resultverification "TiveQP/Resultverification"
-	trapdoor "TiveQP/TrapDoor"
+	trapdoor "TiveQP/Trapdoor"
 	"fmt"
 	"testing"
 )
@@ -32,7 +32,6 @@ func TestMain(t *testing.T) {
 	} else {
 		fmt.Println("Final tree created successfully!")
 	}
-
 	// "Fast Food**AUSTIN**30.2795878**-97.806248**12**12"
 	// Restaurants**ATLANTA**33.846335**-84.3635778**12**12
 	// Shopping**AUSTIN**30.3575044**-97.7321061**10**0**19**0
@@ -73,12 +72,14 @@ func TestMain(t *testing.T) {
 		fmt.Println(string(p))
 		// fmt.Println("\n========================================")
 	}
-	for _, v := range pi {
-		fmt.Println(v)
-		// fmt.Println("\n========================================")
-	}
+	// for _, v := range pi {
+	// 	fmt.Println(v)
+	// 	// fmt.Println("\n========================================")
+	// }
+	fmt.Println("======================================================================")
 	fmt.Println("check HV==", resultverification.CheckHV(finalRoot.HV, pi))
 	fmt.Println("======================================================================")
+	fmt.Println("check Completeness==", resultverification.CheckCompleteness(T, pi))
 
 	// fmt.Println("Query begin!===Shopping**AUSTIN**30.3575044**-97.7321061**11**11")
 	// k1 := 2

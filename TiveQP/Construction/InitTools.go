@@ -105,7 +105,7 @@ func Insert(twinlist *TwinBitArray, data string, keylist []string, rb int) error
 }
 
 // 对补集的处理(记录在节点属性中)
-func InsertCS(twinlist *TwinBitArray, data string, bit_CS_i *[]string, keylist []string, hv_cs *[]byte, rb int) error {
+func InsertCS(twinlist *TwinBitArray, data string, bit_CS_i *[]string, keylist []string, hv_cs *[][]byte, rb int) error {
 	// 循环计算每个 key 对应的位置
 	for i := 0; i < len(keylist)-1; i++ {
 		// 计算 HMAC(w, k_i)
@@ -125,13 +125,13 @@ func InsertCS(twinlist *TwinBitArray, data string, bit_CS_i *[]string, keylist [
 		if location == 0 {
 			// twinlist.Set(0, int(twinIndex), true)  // Set bit to 1 for twinlist[0][twinIndex]
 			// twinlist.Set(1, int(twinIndex), false) // Set bit to 0 for twinlist[1][twinIndex]
-			*bit_CS_i = append(*bit_CS_i, strconv.FormatInt(twinIndex, 10)+"|"+strconv.Itoa(1))
-			*hv_cs = append(*hv_cs, HMACSHA256([]byte((*bit_CS_i)[i]), []byte(keylist[i]))...)
+			(*bit_CS_i)[i] = strconv.FormatInt(twinIndex, 10) + "|" + strconv.Itoa(0)
+			(*hv_cs)[i] = append((*hv_cs)[i], HMACSHA256([]byte((*bit_CS_i)[i]), []byte(keylist[i]))...)
 		} else {
 			// twinlist.Set(1, int(twinIndex), true)  // Set bit to 1 for twinlist[1][twinIndex]
 			// twinlist.Set(0, int(twinIndex), false) // Set bit to 0 for twinlist[0][twinIndex]
-			*bit_CS_i = append(*bit_CS_i, strconv.FormatInt(twinIndex, 10)+"|"+strconv.Itoa(0))
-			*hv_cs = append(*hv_cs, HMACSHA256([]byte((*bit_CS_i)[i]), []byte(keylist[i]))...)
+			(*bit_CS_i)[i] = strconv.FormatInt(twinIndex, 10) + "|" + strconv.Itoa(1)
+			(*hv_cs)[i] = append((*hv_cs)[i], HMACSHA256([]byte((*bit_CS_i)[i]), []byte(keylist[i]))...)
 		}
 	}
 	return nil

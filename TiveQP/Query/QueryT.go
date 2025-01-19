@@ -29,7 +29,7 @@ package query
 // 13948
 import (
 	construction "TiveQP/Construction"
-	trapdoor "TiveQP/TrapDoor"
+	trapdoor "TiveQP/Trapdoor"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -38,7 +38,6 @@ import (
 )
 
 func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int, result *[]*[]byte, pi *[]*PON) {
-	// root.Print()
 	// 空节点
 	if root == nil {
 		return
@@ -46,37 +45,57 @@ func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int,
 	// k 个查询结束 UNN
 	if *k == 0 {
 		poof := &PON{
-			HV:     root.HV,
-			Height: height,
-			Typ:    "UNN",
+			HV:       root.HV,
+			Height:   height,
+			Typ:      "UNN",
+			Bits_LCS: root.Bits_LCS,
+			Bits_TCS: root.Bits_TCS,
+			Bits_YCS: root.Bits_YCS,
+			HV_LCS:   root.HV_LCS,
+			HV_TCS:   root.HV_TCS,
+			HV_YCS:   root.HV_YCS,
 		}
 		*pi = append(*pi, poof)
-		fmt.Println("UNN height=", height)
+		fmt.Println("UNN height=", height, "tye=", root.Typ)
+		//root.Print()
 		return
 	}
 	// UMN
 	if !check(root, td, rb) {
 		poof := &PON{
-			HV:     root.HV,
-			Height: height,
-			Typ:    "UMN",
+			HV:       root.HV,
+			Height:   height,
+			Typ:      "UMN",
+			Bits_LCS: root.Bits_LCS,
+			Bits_TCS: root.Bits_TCS,
+			Bits_YCS: root.Bits_YCS,
+			HV_LCS:   root.HV_LCS,
+			HV_TCS:   root.HV_TCS,
+			HV_YCS:   root.HV_YCS,
 		}
 		*pi = append(*pi, poof)
-		fmt.Println("UMN height=", height)
+		fmt.Println("UMN height=", height, "tye=", root.Typ)
+		//root.Print()
 		return
 	}
 	// leafNode == MLN
 	if root.Left == nil && root.Right == nil {
 		fmt.Println("k=", *k, "height=", height, "<=================================================")
-		//root.Print()
 		*k -= 1
 		*result = append(*result, &root.Cipher)
 		poof := &PON{
-			HV:     root.HV,
-			Height: height,
-			Typ:    "MLN",
+			HV:       root.HV,
+			Height:   height,
+			Typ:      "MLN",
+			Bits_LCS: root.Bits_LCS,
+			Bits_TCS: root.Bits_TCS,
+			Bits_YCS: root.Bits_YCS,
+			HV_LCS:   root.HV_LCS,
+			HV_TCS:   root.HV_TCS,
+			HV_YCS:   root.HV_YCS,
 		}
 		*pi = append(*pi, poof)
+		//root.Print()
 		return
 	}
 

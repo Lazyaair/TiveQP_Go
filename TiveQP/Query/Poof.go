@@ -10,5 +10,13 @@ type PON struct {
 	// 层高
 	Height int
 
-	// ======完整性=======
+	// ======完备性=======
+
+	Bits_LCS [][]string
+	Bits_TCS [][]string
+	Bits_YCS [][]string
+
+	HV_LCS [][][]byte
+	HV_TCS [][][]byte
+	HV_YCS [][][]byte
 }

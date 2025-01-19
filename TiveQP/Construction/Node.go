@@ -76,9 +76,9 @@ type Node struct {
 	Bits_TCS [][]string
 	Bits_YCS [][]string
 	// Bits的摘要
-	HV_LCS [][]byte
-	HV_TCS [][]byte
-	HV_YCS [][]byte
+	HV_LCS [][][]byte
+	HV_TCS [][][]byte
+	HV_YCS [][][]byte
 	// 原始数据的摘要
 	HV []byte
 	// 密文
@@ -88,9 +88,45 @@ type Node struct {
 	Right *Node
 }
 
+//	func (n *Node) Print() {
+//		typslice := strings.Join(n.Typ, ",")
+//		fmt.Println("Type:", typslice, "Owner:", n.Owner)
+//	}
 func (n *Node) Print() {
+	if n == nil {
+		fmt.Println("Node is nil")
+		return
+	}
+
+	// 输出基本信息
 	typslice := strings.Join(n.Typ, ",")
-	fmt.Println("Type:", typslice, "Owner:", n.Owner)
+	fmt.Println("=== Node Information ===")
+	fmt.Printf("Type: [%s]\n", typslice)
+	if n.Owner != nil {
+		fmt.Printf("Owner: %+v\n", *n.Owner)
+	} else {
+		fmt.Println("Owner: nil")
+	}
+
+	// 输出补集信息
+	fmt.Printf("LCS: %v\n", n.LCS)
+	fmt.Printf("TCS: %v\n", n.TCS)
+	fmt.Printf("YCS: %v\n", n.YCS)
+
+	// 输出 Bits 信息
+	fmt.Printf("Bits_LCS: %v\n", n.Bits_LCS)
+	fmt.Printf("Bits_TCS: %v\n", n.Bits_TCS)
+	fmt.Printf("Bits_YCS: %v\n", n.Bits_YCS)
+
+	// 输出 HV 信息
+	fmt.Printf("HV_LCS: %v\n", n.HV_LCS)
+	fmt.Printf("HV_TCS: %v\n", n.HV_TCS)
+	fmt.Printf("HV_YCS: %v\n", n.HV_YCS)
+	fmt.Printf("HV: %v\n", n.HV)
+
+	// 输出密文
+	fmt.Printf("Cipher: %v\n", n.Cipher)
+	fmt.Println("====================")
 }
 
 // 下层叶节点初始化
@@ -113,11 +149,11 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 		return fmt.Errorf("Location补集编码失败")
 	}
 	dln.Bits_LCS = make([][]string, len(dln.LCS))
-	dln.HV_LCS = make([][]byte, len(dln.LCS))
+	dln.HV_LCS = make([][][]byte, len(dln.LCS))
 	// 处理location补集！
 	for i := 0; i < len(dln.LCS); i++ {
-		dln.Bits_LCS[i] = make([]string, len(Keylist))
-		dln.HV_LCS[i] = make([]byte, len(Keylist))
+		dln.Bits_LCS[i] = make([]string, len(Keylist)-1)
+		dln.HV_LCS[i] = make([][]byte, len(Keylist)-1)
 		InsertCS(dln.IBF, dln.LCS[i], &dln.Bits_LCS[i], Keylist, &dln.HV_LCS[i], rb)
 	}
 
@@ -137,11 +173,11 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 		return fmt.Errorf("Time补集编码失败")
 	}
 	dln.Bits_TCS = make([][]string, len(dln.TCS))
-	dln.HV_TCS = make([][]byte, len(dln.TCS))
+	dln.HV_TCS = make([][][]byte, len(dln.TCS))
 	// 处理Time补集！
 	for i := 0; i < len(dln.TCS); i++ {
-		dln.Bits_TCS[i] = make([]string, len(Keylist))
-		dln.HV_TCS[i] = make([]byte, len(Keylist))
+		dln.Bits_TCS[i] = make([]string, len(Keylist)-1)
+		dln.HV_TCS[i] = make([][]byte, len(Keylist)-1)
 		InsertCS(dln.IBF, dln.TCS[i], &dln.Bits_TCS[i], Keylist, &dln.HV_TCS[i], rb)
 	}
 
@@ -177,20 +213,20 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 	dmn.TCS = MergeSet(dmn.Left.TCS, dmn.Right.TCS)
 
 	dmn.Bits_LCS = make([][]string, len(dmn.LCS))
-	dmn.HV_LCS = make([][]byte, len(dmn.LCS))
+	dmn.HV_LCS = make([][][]byte, len(dmn.LCS))
 	// 处理location补集！
 	for i := 0; i < len(dmn.LCS); i++ {
-		dmn.Bits_LCS[i] = make([]string, len(Keylist))
-		dmn.HV_LCS[i] = make([]byte, len(Keylist))
+		dmn.Bits_LCS[i] = make([]string, len(Keylist)-1)
+		dmn.HV_LCS[i] = make([][]byte, len(Keylist)-1)
 		InsertCS(dmn.IBF, dmn.LCS[i], &dmn.Bits_LCS[i], Keylist, &dmn.HV_LCS[i], rb)
 	}
 
 	dmn.Bits_TCS = make([][]string, len(dmn.TCS))
-	dmn.HV_TCS = make([][]byte, len(dmn.TCS))
+	dmn.HV_TCS = make([][][]byte, len(dmn.TCS))
 	// 处理Time补集！
 	for i := 0; i < len(dmn.TCS); i++ {
-		dmn.Bits_TCS[i] = make([]string, len(Keylist))
-		dmn.HV_TCS[i] = make([]byte, len(Keylist))
+		dmn.Bits_TCS[i] = make([]string, len(Keylist)-1)
+		dmn.HV_TCS[i] = make([][]byte, len(Keylist)-1)
 		err := InsertCS(dmn.IBF, dmn.TCS[i], &dmn.Bits_TCS[i], Keylist, &dmn.HV_TCS[i], rb)
 		if err != nil {
 			return fmt.Errorf("IBF:%v,TCS:%v,BITTCS:%v", dmn.IBF, dmn.TCS[i], dmn.Bits_TCS[i])
@@ -242,10 +278,10 @@ func (uln *Node) InitUpLeafNode(typ string, ibf_length int, Keylist []string, rb
 	}
 	// 处理type补集！
 	uln.Bits_YCS = make([][]string, len(uln.YCS))
-	uln.HV_YCS = make([][]byte, len(uln.YCS))
+	uln.HV_YCS = make([][][]byte, len(uln.YCS))
 	for i := 0; i < len(uln.YCS); i++ {
-		uln.Bits_YCS[i] = make([]string, len(Keylist))
-		uln.HV_YCS[i] = make([]byte, len(Keylist))
+		uln.Bits_YCS[i] = make([]string, len(Keylist)-1)
+		uln.HV_YCS[i] = make([][]byte, len(Keylist)-1)
 		InsertCS(uln.IBF, uln.YCS[i], &uln.Bits_YCS[i], Keylist, &uln.HV_YCS[i], rb)
 	}
 
@@ -265,10 +301,10 @@ func (mrn *Node) InitUpMid_RootNode(ibf_length int, Keylist []string, rb int) er
 	mrn.Typ = MergeSet(mrn.Left.Typ, mrn.Right.Typ)
 	// 处理type补集！
 	mrn.Bits_YCS = make([][]string, len(mrn.YCS))
-	mrn.HV_YCS = make([][]byte, len(mrn.YCS))
+	mrn.HV_YCS = make([][][]byte, len(mrn.YCS))
 	for i := 0; i < len(mrn.YCS); i++ {
-		mrn.Bits_YCS[i] = make([]string, len(Keylist))
-		mrn.HV_YCS[i] = make([]byte, len(Keylist))
+		mrn.Bits_YCS[i] = make([]string, len(Keylist)-1)
+		mrn.HV_YCS[i] = make([][]byte, len(Keylist)-1)
 		InsertCS(mrn.IBF, mrn.YCS[i], &mrn.Bits_YCS[i], Keylist, &mrn.HV_YCS[i], rb)
 	}
 
