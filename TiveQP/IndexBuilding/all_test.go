@@ -14,9 +14,10 @@ func TestCity(t *testing.T) {
 
 // element test
 func TestPrefix(t *testing.T) {
-	for i := 24; i < 47; i++ {
-		fmt.Println(Prefix(6, i))
-	}
+	// for i := 24; i < 47; i++ {
+	// 	fmt.Println(Prefix(6, i))
+	// }
+	fmt.Println(Prefix(6, 35))
 }
 
 // func TestSamesize(t *testing.T) {
@@ -24,7 +25,7 @@ func TestPrefix(t *testing.T) {
 // }
 
 func TestRange(t *testing.T) {
-	fmt.Println(Range(12, 1136, 1182))
+	fmt.Println(Range(6, 12, 29))
 }
 
 // location test
@@ -34,6 +35,8 @@ func TestLocationEncoding(t *testing.T) {
 	lng := -71.1389101
 	locationCode, _ := LocationEncoding(cityName, lat, lng)
 	fmt.Println("Code:", locationCode)
+	UserCode, _ := LocationEncodingUser(cityName, lat, lng)
+	fmt.Println("UserCode:", UserCode)
 	locationCodeComplement, _ := LocationEncodingComplement(cityName, lat, lng)
 	fmt.Println("ComplementCode:", locationCodeComplement)
 }
@@ -68,8 +71,8 @@ func TestGetTypeIndex(t *testing.T) {
 }
 
 func TestTypeEncoding(t *testing.T) {
-	fmt.Println(GetTypeIndex("Dentists"))
-	fmt.Println(TypeEncoding("Dentists"))
+	fmt.Println(GetTypeIndex("Restaurants"))
+	fmt.Println(TypeEncoding("Restaurants"))
 }
 
 func TestTypeEncodingComplement(t *testing.T) {
