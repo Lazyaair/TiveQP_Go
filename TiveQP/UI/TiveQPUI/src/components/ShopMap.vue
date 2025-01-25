@@ -1,83 +1,144 @@
 <template>
   <div class="map-container">
-    <div class="search-panel">
+    <!-- 用户界面 -->
+    <div v-if="currentRole === 'user'" class="search-panel">
       <div class="panel-header">
         <h2>店铺查询</h2>
         <p class="stats">共 {{ filteredShopsCount }} 家店铺</p>
       </div>
       
-      <el-input
-        v-model="searchQuery"
-        placeholder="搜索店铺..."
-        class="search-input"
-        :prefix-icon="Search"
-        clearable
-        @keyup.enter="handleSearch"
-      >
-        <template #append>
-          <el-button @click="handleSearch">搜索</el-button>
-        </template>
-      </el-input>
-      
-      <el-collapse>
-        <el-collapse-item title="高级筛选" name="1">
-          <el-form :model="filters" class="filter-form" label-position="top">
-            <el-form-item label="店铺类型">
-              <el-select 
-                v-model="filters.type" 
-                placeholder="选择店铺类型" 
-                clearable
-                class="full-width"
-              >
-                <el-option 
-                  v-for="type in uniqueTypes" 
-                  :key="type" 
-                  :label="type" 
-                  :value="type" 
-                />
-              </el-select>
-            </el-form-item>
-            
-            <el-form-item label="城市">
-              <el-select 
-                v-model="filters.city" 
-                placeholder="选择城市" 
-                clearable
-                class="full-width"
-              >
-                <el-option 
-                  v-for="city in uniqueCities" 
-                  :key="city" 
-                  :label="city" 
-                  :value="city" 
-                />
-              </el-select>
-            </el-form-item>
-            
-            <el-form-item label="营业时间">
-              <div class="time-range">
-                <el-time-select
-                  v-model="filters.timeStart"
-                  start="00:00"
-                  step="00:30"
-                  end="23:30"
-                  placeholder="开始时间"
-                  clearable
-                />
-                <span class="time-separator">至</span>
-                <el-time-select
-                  v-model="filters.timeEnd"
-                  start="00:00"
-                  step="00:30"
-                  end="23:30"
-                  placeholder="结束时间"
-                  clearable
-                />
-              </div>
-            </el-form-item>
-          </el-form>
-        </el-collapse-item>
-      </el-collapse>
+      <el-form :model="userFilters" class="filter-form" label-position="top">
+        <el-form-item label="店铺类型">
+          <el-select 
+            v-model="userFilters.type" 
+            placeholder="选择店铺类型" 
+            clearable
+            class="full-width"
+          >
+            <el-option 
+              v-for="type in uniqueTypes" 
+              :key="type" 
+              :label="type" 
+              :value="type" 
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="查询时间">
+          <el-radio-group v-model="userFilters.timeMode" class="time-mode">
+            <el-radio label="current">当前时间</el-radio>
+            <el-radio label="specific">指定时间</el-radio>
+          </el-radio-group>
+          
+          <el-time-picker
+            v-if="userFilters.timeMode === 'specific'"
+            v-model="userFilters.specificTime"
+            format="HH:mm"
+            placeholder="选择时间"
+            class="full-width"
+          />
+        </el-form-item>
+
+        <el-form-item label="城市">
+          <el-select 
+            v-model="userFilters.city" 
+            placeholder="选择城市" 
+            clearable
+            class="full-width"
+          >
+            <el-option 
+              v-for="city in uniqueCities" 
+              :key="city" 
+              :label="city" 
+              :value="city" 
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-button type="primary" @click="handleUserSearch" class="search-btn">
+          查询
+        </el-button>
+      </el-form>
+
+      <!-- 查询结果列表 -->
+      <div v-if="searchResults.length > 0" class="search-results">
+        <h3>查询结果</h3>
+        <el-scrollbar height="300px">
+          <div v-for="shop in searchResults" :key="shop.id" class="shop-item" @click="focusShop(shop)">
+            <h4>{{ shop.type }}</h4>
+            <p>{{ shop.city }}</p>
+            <p>营业时间: {{ shop.openTime }} - {{ shop.closeTime }}</p>
+          </div>
+        </el-scrollbar>
+      </div>
+    </div>
+
+    <!-- 店主界面 -->
+    <div v-else-if="currentRole === 'owner'" class="filter-panel">
+      <div class="panel-header">
+        <h2>店铺管理</h2>
+        <p class="stats">共 {{ filteredShopsCount }} 家店铺</p>
+      </div>
+
+      <el-form :model="ownerFilters" class="filter-form" label-position="top">
+        <el-form-item label="店铺类型">
+          <el-select 
+            v-model="ownerFilters.type" 
+            placeholder="选择店铺类型" 
+            clearable
+            class="full-width"
+          >
+            <el-option 
+              v-for="type in uniqueTypes" 
+              :key="type" 
+              :label="type" 
+              :value="type" 
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="时间段">
+          <div class="time-range">
+            <el-time-select
+              v-model="ownerFilters.timeStart"
+              start="00:00"
+              step="00:30"
+              end="23:30"
+              placeholder="开始时间"
+              clearable
+            />
+            <span class="time-separator">至</span>
+            <el-time-select
+              v-model="ownerFilters.timeEnd"
+              start="00:00"
+              step="00:30"
+              end="23:30"
+              placeholder="结束时间"
+              clearable
+            />
+          </div>
+        </el-form-item>
+
+        <el-form-item label="城市">
+          <el-select 
+            v-model="ownerFilters.city" 
+            placeholder="选择城市" 
+            clearable
+            class="full-width"
+          >
+            <el-option 
+              v-for="city in uniqueCities" 
+              :key="city" 
+              :label="city" 
+              :value="city" 
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-button type="primary" @click="handleOwnerFilter" class="filter-btn">
+          筛选
+        </el-button>
+      </el-form>
     </div>
     
     <div class="map-controls">
@@ -93,53 +154,115 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import { Search, Plus, Minus } from '@element-plus/icons-vue'
-import { shops, type Shop } from '../data/shopLoader'
+import { Plus, Minus } from '@element-plus/icons-vue'
+import { shops, type Shop } from '../data/shops'
 
-interface Filters {
+const route = useRoute()
+const currentRole = computed(() => route.query.role as string)
+
+interface UserFilters {
   type: string
+  timeMode: 'current' | 'specific'
+  specificTime: string | null
   city: string
+}
+
+interface OwnerFilters {
+  type: string
   timeStart: string
   timeEnd: string
+  city: string
 }
 
 const mapContainer = ref<HTMLElement | null>(null)
-const searchQuery = ref('')
 const map = ref<L.Map | null>(null)
 const markers = ref<L.Marker[]>([])
 const shopList = ref<Shop[]>([])
+const searchResults = ref<Shop[]>([])
 
-const filters = reactive<Filters>({
+const userFilters = reactive<UserFilters>({
   type: '',
-  city: '',
+  timeMode: 'current',
+  specificTime: null,
+  city: ''
+})
+
+const ownerFilters = reactive<OwnerFilters>({
+  type: '',
   timeStart: '',
-  timeEnd: ''
+  timeEnd: '',
+  city: ''
 })
 
 // 计算过滤后的店铺数量
 const filteredShopsCount = computed(() => {
-  return getFilteredShops().length
+  return currentRole.value === 'user' ? searchResults.value.length : getFilteredShops().length
 })
 
-// 获取过滤后的店铺列表
+// 获取当前时间是否在营业时间内
+const isShopOpen = (shop: Shop, checkTime: string) => {
+  const time = new Date(`1970-01-01T${checkTime}`)
+  const open = new Date(`1970-01-01T${shop.openTime}`)
+  const close = new Date(`1970-01-01T${shop.closeTime}`)
+  return time >= open && time <= close
+}
+
+// 用户查询处理
+const handleUserSearch = () => {
+  const currentTime = new Date().toLocaleTimeString('en-US', { 
+    hour12: false, 
+    hour: '2-digit', 
+    minute: '2-digit'
+  })
+  
+  const checkTime = userFilters.timeMode === 'current' 
+    ? currentTime 
+    : userFilters.specificTime
+
+  searchResults.value = shopList.value.filter(shop => {
+    const matchType = !userFilters.type || shop.type === userFilters.type
+    const matchCity = !userFilters.city || shop.city === userFilters.city
+    const matchTime = checkTime ? isShopOpen(shop, checkTime) : true
+
+    return matchType && matchCity && matchTime
+  })
+
+  addMarkers(searchResults.value)
+}
+
+// 店主筛选处理
+const handleOwnerFilter = () => {
+  const filteredShops = getFilteredShops()
+  addMarkers(filteredShops)
+}
+
+// 获取过滤后的店铺列表（店主视角）
 const getFilteredShops = () => {
   return shopList.value.filter((shop: Shop) => {
-    const matchSearch = searchQuery.value 
-      ? shop.type.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        shop.city.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchType = !ownerFilters.type || shop.type === ownerFilters.type
+    const matchCity = !ownerFilters.city || shop.city === ownerFilters.city
+    const matchTime = ownerFilters.timeStart && ownerFilters.timeEnd 
+      ? new Date(`1970-01-01T${ownerFilters.timeStart}`).getTime() >= new Date(`1970-01-01T${shop.openTime}`).getTime() &&
+        new Date(`1970-01-01T${ownerFilters.timeEnd}`).getTime() <= new Date(`1970-01-01T${shop.closeTime}`).getTime()
       : true
 
-    const matchType = filters.type ? shop.type === filters.type : true
-    const matchCity = filters.city ? shop.city === filters.city : true
-    const matchTime = filters.timeStart && filters.timeEnd 
-      ? new Date(`1970-01-01T${filters.timeStart}`).getTime() >= new Date(`1970-01-01T${shop.openTime}`).getTime() &&
-        new Date(`1970-01-01T${filters.timeEnd}`).getTime() <= new Date(`1970-01-01T${shop.closeTime}`).getTime()
-      : true
-
-    return matchSearch && matchType && matchCity && matchTime
+    return matchType && matchCity && matchTime
   })
+}
+
+// 聚焦到特定店铺
+const focusShop = (shop: Shop) => {
+  if (map.value) {
+    map.value.setView([shop.location.lat, shop.location.lng], 15)
+    markers.value.forEach(marker => {
+      if (marker.getLatLng().equals([shop.location.lat, shop.location.lng])) {
+        marker.openPopup()
+      }
+    })
+  }
 }
 
 const addMarkers = (shops: Shop[]) => {
@@ -173,39 +296,6 @@ const handleZoomOut = () => {
   }
 }
 
-onMounted(() => {
-  if (!mapContainer.value) return
-
-  map.value = L.map(mapContainer.value, {
-    zoomControl: false
-  }).setView([28.4498736, -81.4863524], 10)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map.value)
-
-  // 使用模拟数据
-  shopList.value = [
-    {
-      id: '1',
-      type: 'Hair Salons',
-      city: 'ORLANDO',
-      location: {
-        lat: 28.4498736,
-        lng: -81.4863524
-      },
-      openTime: '10:00',
-      closeTime: '18:00'
-    }
-  ]
-  
-  addMarkers(shopList.value)
-})
-
-const handleSearch = () => {
-  const filteredShops = getFilteredShops()
-  addMarkers(filteredShops)
-}
-
 // 获取所有唯一的店铺类型和城市
 const uniqueTypes = computed(() => 
   Array.from(new Set(shopList.value.map(shop => shop.type)))
@@ -215,10 +305,26 @@ const uniqueCities = computed(() =>
   Array.from(new Set(shopList.value.map(shop => shop.city)))
 )
 
-defineExpose({
-  searchQuery,
-  filters,
-  handleSearch
+onMounted(() => {
+  if (!mapContainer.value) return
+
+  // 使用生成的店铺数据
+  shopList.value = shops
+  
+  // 计算所有店铺的平均位置作为地图中心
+  const avgLat = shops.reduce((sum, shop) => sum + shop.location.lat, 0) / shops.length
+  const avgLng = shops.reduce((sum, shop) => sum + shop.location.lng, 0) / shops.length
+
+  map.value = L.map(mapContainer.value, {
+    zoomControl: false
+  }).setView([avgLat, avgLng], 5) // 调整缩放级别以显示整个中国
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map.value)
+
+  // 初始显示所有店铺
+  addMarkers(shopList.value)
 })
 </script>
 
@@ -538,5 +644,51 @@ defineExpose({
   .time-separator {
     display: none;
   }
+}
+
+.search-results {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+}
+
+.search-results h3 {
+  margin: 0 0 15px;
+  color: #333;
+}
+
+.shop-item {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shop-item:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.time-mode {
+  margin-bottom: 10px;
+  width: 100%;
+  display: flex;
+  gap: 20px;
+}
+
+.filter-panel {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  width: 350px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
 }
 </style>

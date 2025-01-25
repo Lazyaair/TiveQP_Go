@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../components/Login.vue'
+import RoleSelect from '../components/RoleSelect.vue'
 import ShopMap from '../components/ShopMap.vue'
 
 const router = createRouter({
@@ -7,31 +8,47 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/login'
-    },
-    {
-      path: '/login',
-      name: 'Login',
+      name: 'login',
       component: Login
     },
     {
+      path: '/role-select',
+      name: 'role-select',
+      component: RoleSelect,
+      beforeEnter: (to, from, next) => {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          next('/')
+        } else {
+          next()
+        }
+      }
+    },
+    {
       path: '/map',
-      name: 'ShopMap',
+      name: 'map',
       component: ShopMap,
-      meta: { requiresAuth: true }
+      beforeEnter: (to, from, next) => {
+        const token = localStorage.getItem('token')
+        const role = localStorage.getItem('userRole')
+        if (!token) {
+          next('/')
+        } else if (!role) {
+          next('/role-select')
+        } else {
+          next()
+        }
+      }
     }
   ]
 })
 
-// 路由守卫
+// 全局前置守卫
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  
-  if (to.meta.requiresAuth && !token) {
-    next('/login')
-  } else {
-    next()
-  }
+  console.log('Navigation to:', to.path)
+  console.log('Token:', localStorage.getItem('token'))
+  console.log('Role:', localStorage.getItem('userRole'))
+  next()
 })
 
 export default router 

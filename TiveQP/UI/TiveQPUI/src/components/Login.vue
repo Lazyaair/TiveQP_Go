@@ -87,7 +87,10 @@ const handleLogin = async () => {
     if (loginForm.username === 'admin' && loginForm.password === '123456') {
       localStorage.setItem('token', 'dummy-token')
       ElMessage.success('登录成功')
-      router.push('/map')
+      // 确保在路由跳转前等待一下，让消息显示完成
+      setTimeout(() => {
+        router.push('/role-select')
+      }, 500)
     } else {
       ElMessage.error('登录失败，用户名或密码错误')
     }
