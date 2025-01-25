@@ -52,19 +52,25 @@ const selectRole = (role: string) => {
 }
 
 const handleConfirm = async () => {
-  if (selectedRole.value) {
-    loading.value = true
-    try {
-      localStorage.setItem('userRole', selectedRole.value)
-      await router.push({
-        path: '/map',
-        query: { role: selectedRole.value }
-      })
-    } catch (error) {
-      ElMessage.error('页面跳转失败，请重试')
-    } finally {
-      loading.value = false
+  if (!selectedRole.value) return
+  
+  loading.value = true
+  try {
+    // 存储角色信息
+    localStorage.setItem('role', selectedRole.value)
+    
+    // 根据角色跳转到对应的仪表板
+    if (selectedRole.value === 'user') {
+      await router.push('/user-dashboard')
+    } else {
+      await router.push('/owner-dashboard')
     }
+    
+    ElMessage.success('角色选择成功')
+  } catch (error) {
+    ElMessage.error('跳转失败，请重试')
+  } finally {
+    loading.value = false
   }
 }
 </script>
