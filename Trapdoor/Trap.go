@@ -1,7 +1,7 @@
 package trapdoor
 
 import (
-	indexbuilding "TiveQP/IndexBuilding"
+	indexbuilding "TiveQP/Indexbuilding"
 	"encoding/hex"
 )
 

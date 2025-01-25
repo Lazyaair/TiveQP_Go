@@ -1,7 +1,7 @@
 package construction
 
 import (
-	indexbuilding "TiveQP/IndexBuilding"
+	indexbuilding "TiveQP/Indexbuilding"
 	"bufio"
 	"fmt"
 	"os"
