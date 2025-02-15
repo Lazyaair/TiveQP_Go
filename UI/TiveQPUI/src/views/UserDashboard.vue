@@ -87,11 +87,15 @@
       <div class="result-card" v-if="searchResults.length">
         <h3>查询结果 ({{ searchResults.length }})</h3>
         <el-table :data="searchResults" style="width: 100%" height="300">
-          <el-table-column prop="name" label="店铺名称" />
-          <el-table-column prop="type" label="类型" width="100" />
-          <el-table-column prop="distance" label="距离" width="100">
+          <el-table-column prop="type" label="类型" width="120" />
+          <el-table-column label="开始时间" width="120">
             <template #default="{ row }">
-              {{ formatDistance(row.distance) }}
+              {{ formatTime(row.hourStart, row.minStart) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="结束时间" width="120">
+            <template #default="{ row }">
+              {{ formatTime(row.hourClose, row.minClose) }}
             </template>
           </el-table-column>
         </el-table>
@@ -109,6 +113,7 @@
         :currentLocation="currentLocation"
         :selectedShop="selectedShop"
         @shop-click="handleShopClick"
+        ref="mapRef"
       />
     </div>
   </div>
@@ -126,11 +131,14 @@ interface Location {
 }
 
 interface Shop {
-  id: string
-  name: string
   type: string
-  location: Location
-  distance?: number
+  city: string
+  lat: number
+  lng: number
+  hourStart: number
+  minStart: number
+  hourClose: number
+  minClose: number
 }
 
 // 状态
@@ -140,13 +148,13 @@ const searchLoading = ref(false)
 const hasSearched = ref(false)
 const searchResults = ref<Shop[]>([])
 const selectedShop = ref<Shop | null>(null)
-const shopTypes = ref(['餐厅', '超市', '便利店', '药店'])
+const shopTypes = ref(['Restaurants', '超市', '便利店', '药店'])
 const locationMode = ref('auto')
 const selectedCity = ref('')
 
 // 城市数据
 const cities = [
-  { label: '北京', value: 'beijing' },
+  { label: 'ATLANTA', value: 'ATLANTA' },
   { label: '上海', value: 'shanghai' },
   { label: '广州', value: 'guangzhou' },
   { label: '深圳', value: 'shenzhen' },
@@ -157,7 +165,7 @@ const cities = [
 const searchForm = reactive({
   type: '',
   timeMode: 'current',
-  specificTime: null,
+  specificTime: new Date(),
   radius: 1
 })
 
@@ -222,26 +230,67 @@ const handleSearch = async () => {
   hasSearched.value = true
   
   try {
-    // TODO: 调用后端API
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    searchResults.value = [
-      {
-        id: '1',
-        name: '示例店铺1',
-        type: '餐厅',
-        location: locationMode.value === 'auto' ? {
-          latitude: currentLocation.value!.latitude + 0.001,
-          longitude: currentLocation.value!.longitude + 0.001
-        } : {
-          latitude: 39.9042,
-          longitude: 116.4074
-        },
-        distance: 200
+    // 获取当前时间或指定时间
+    const time = searchForm.timeMode === 'specific' ? searchForm.specificTime : new Date()
+    
+    // 构建参数字符串
+    const params = [
+      searchForm.type || 'ALL',  // 如果没有选择类型，使用'ALL'
+      locationMode.value === 'auto' ? '自动获取的城市' : selectedCity.value,
+      locationMode.value === 'auto' ? currentLocation.value!.latitude.toString() : '33.846335',
+      locationMode.value === 'auto' ? currentLocation.value!.longitude.toString() : '-84.3635778',
+      time.getHours().toString(),
+      time.getMinutes().toString()
+    ].join('**')
+
+    console.log('Sending search request with params:', params) // 添加日志
+
+    // 发送GET请求
+    const response = await fetch(`http://localhost:8080/api/message?params=${encodeURIComponent(params)}`)
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log('Received data from API:', data) // 添加日志
+    
+    // 处理返回的数据
+    if (data && Array.isArray(data)) {
+      const processedResults = data.map(shop => ({
+        type: shop.type,
+        city: shop.city,
+        lat: shop.lat,
+        lng: shop.lng,
+        hourStart: shop.hourStart,
+        minStart: shop.minStart,
+        hourClose: shop.hourClose,
+        minClose: shop.minClose
+      }))
+
+      console.log('Processed search results:', processedResults) // 添加日志
+      
+      searchResults.value = processedResults
+      // 更新地图标记
+      if (mapRef.value) {
+        console.log('Updating map with results') // 添加日志
+        mapRef.value.updateShops(processedResults)
+      } else {
+        console.error('Map reference not found') // 添加错误日志
       }
-    ]
+
+      if (processedResults.length === 0) {
+        ElMessage.info('未找到符合条件的店铺')
+      } else {
+        ElMessage.success(`找到 ${processedResults.length} 家店铺`)
+      }
+    } else {
+      throw new Error('返回数据格式错误')
+    }
   } catch (error) {
-    ElMessage.error('搜索失败，请重试')
+    console.error('搜索错误:', error)
+    ElMessage.error(error instanceof Error ? error.message : '搜索失败，请重试')
+    searchResults.value = []
   } finally {
     searchLoading.value = false
   }
@@ -256,6 +305,14 @@ const handleShopClick = (shop: Shop) => {
 const formatDistance = (meters: number) => {
   return meters < 1000 ? `${meters}m` : `${(meters / 1000).toFixed(1)}km`
 }
+
+// 格式化时间
+const formatTime = (hour: number, minute: number) => {
+  return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+}
+
+// 添加地图组件引用
+const mapRef = ref()
 
 // 初始化获取位置
 if (locationMode.value === 'auto') {

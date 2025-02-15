@@ -61,15 +61,41 @@
       </el-form>
 
       <!-- 查询结果列表 -->
-      <div v-if="searchResults.length > 0" class="search-results">
-        <h3>查询结果</h3>
-        <el-scrollbar height="300px">
-          <div v-for="shop in searchResults" :key="shop.id" class="shop-item" @click="focusShop(shop)">
-            <h4>{{ shop.type }}</h4>
-            <p>{{ shop.city }}</p>
-            <p>营业时间: {{ shop.openTime }} - {{ shop.closeTime }}</p>
-          </div>
-        </el-scrollbar>
+      <div class="result-card" v-if="searchResults.length">
+        <h3>查询结果 ({{ searchResults.length }})</h3>
+        <el-table 
+          ref="tableRef"
+          :data="searchResults" 
+          style="width: 100%" 
+          height="300"
+          @row-click="handleRowClick"
+          :highlight-current-row="true"
+        >
+          <el-table-column 
+            prop="type" 
+            label="类型" 
+            width="120"
+            class-name="clickable-column"
+          />
+          <el-table-column 
+            label="开始时间" 
+            width="120"
+            class-name="clickable-column"
+          >
+            <template #default="{ row }">
+              {{ formatTime(row.hourStart, row.minStart) }}
+            </template>
+          </el-table-column>
+          <el-table-column 
+            label="结束时间" 
+            width="120"
+            class-name="clickable-column"
+          >
+            <template #default="{ row }">
+              {{ formatTime(row.hourClose, row.minClose) }}
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
     </div>
 
@@ -153,12 +179,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, computed, defineExpose, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { Plus, Minus } from '@element-plus/icons-vue'
-import { shops, type Shop } from '../data/shops'
+
+interface Shop {
+  type: string
+  city: string  // 这个字段将同时作为id使用
+  lat: number
+  lng: number
+  hourStart: number
+  minStart: number
+  hourClose: number
+  minClose: number
+}
 
 const route = useRoute()
 const currentRole = computed(() => route.query.role as string)
@@ -182,6 +218,7 @@ const map = ref<L.Map | null>(null)
 const markers = ref<L.Marker[]>([])
 const shopList = ref<Shop[]>([])
 const searchResults = ref<Shop[]>([])
+const tableRef = ref()
 
 const userFilters = reactive<UserFilters>({
   type: '',
@@ -205,8 +242,8 @@ const filteredShopsCount = computed(() => {
 // 获取当前时间是否在营业时间内
 const isShopOpen = (shop: Shop, checkTime: string) => {
   const time = new Date(`1970-01-01T${checkTime}`)
-  const open = new Date(`1970-01-01T${shop.openTime}`)
-  const close = new Date(`1970-01-01T${shop.closeTime}`)
+  const open = new Date(`1970-01-01T${shop.hourStart}:${shop.minStart}`)
+  const close = new Date(`1970-01-01T${shop.hourClose}:${shop.minClose}`)
   return time >= open && time <= close
 }
 
@@ -220,7 +257,7 @@ const handleUserSearch = () => {
   
   const checkTime = userFilters.timeMode === 'current' 
     ? currentTime 
-    : userFilters.specificTime
+    : userFilters.specificTime || ''
 
   searchResults.value = shopList.value.filter(shop => {
     const matchType = !userFilters.type || shop.type === userFilters.type
@@ -245,42 +282,153 @@ const getFilteredShops = () => {
     const matchType = !ownerFilters.type || shop.type === ownerFilters.type
     const matchCity = !ownerFilters.city || shop.city === ownerFilters.city
     const matchTime = ownerFilters.timeStart && ownerFilters.timeEnd 
-      ? new Date(`1970-01-01T${ownerFilters.timeStart}`).getTime() >= new Date(`1970-01-01T${shop.openTime}`).getTime() &&
-        new Date(`1970-01-01T${ownerFilters.timeEnd}`).getTime() <= new Date(`1970-01-01T${shop.closeTime}`).getTime()
+      ? new Date(`1970-01-01T${ownerFilters.timeStart}`).getTime() >= new Date(`1970-01-01T${shop.hourStart}:${shop.minStart}`).getTime() &&
+        new Date(`1970-01-01T${ownerFilters.timeEnd}`).getTime() <= new Date(`1970-01-01T${shop.hourClose}:${shop.minClose}`).getTime()
       : true
 
     return matchType && matchCity && matchTime
   })
 }
 
+// 处理行点击
+const handleRowClick = (row: Shop, column: any, event: Event) => {
+  console.log('表格行被点击')
+  console.log('点击的行数据:', JSON.stringify(row))
+  
+  if (!row) {
+    console.error('行数据为空')
+    return
+  }
+  
+  if (!map.value) {
+    console.error('地图未初始化')
+    return
+  }
+  
+  // 设置当前选中行
+  if (tableRef.value) {
+    console.log('设置当前选中行')
+    tableRef.value.setCurrentRow(row)
+  }
+  
+  // 聚焦到选中的店铺
+  console.log('调用 focusShop')
+  focusShop(row)
+}
+
 // 聚焦到特定店铺
 const focusShop = (shop: Shop) => {
-  if (map.value) {
-    map.value.setView([shop.location.lat, shop.location.lng], 15)
+  console.log('focusShop called with shop:', shop)
+  
+  if (!map.value) {
+    console.error('Map is not initialized in focusShop')
+    return
+  }
+  
+  if (!shop || typeof shop.lat !== 'number' || typeof shop.lng !== 'number') {
+    console.error('Invalid shop data:', shop)
+    return
+  }
+  
+  try {
+    const currentZoom = map.value.getZoom()
+    console.log('Current map zoom level:', currentZoom)
+    console.log('Flying to coordinates:', [shop.lat, shop.lng])
+    
+    // 先关闭所有已打开的弹窗
     markers.value.forEach(marker => {
-      if (marker.getLatLng().equals([shop.location.lat, shop.location.lng])) {
+      console.log('Closing popup for marker')
+      marker.closePopup()
+    })
+    
+    // 使用平滑动画效果
+    map.value.flyTo([shop.lat, shop.lng], 15, {
+      duration: 1.5,
+      easeLinearity: 0.25
+    })
+    console.log('Map flyTo executed')
+    
+    // 找到对应的标记并打开弹窗
+    let markerFound = false
+    console.log('Total markers:', markers.value.length)
+    
+    markers.value.forEach(marker => {
+      const latLng = marker.getLatLng()
+      console.log('Checking marker position:', latLng, 'against shop position:', [shop.lat, shop.lng])
+      
+      if (Math.abs(latLng.lat - shop.lat) < 0.0001 && Math.abs(latLng.lng - shop.lng) < 0.0001) {
+        console.log('Matching marker found, opening popup')
         marker.openPopup()
+        markerFound = true
       }
     })
+    
+    if (!markerFound) {
+      console.warn('No matching marker found for shop:', shop)
+    }
+  } catch (error) {
+    console.error('Error in focusShop:', error)
   }
 }
 
-const addMarkers = (shops: Shop[]) => {
-  markers.value.forEach(marker => marker.remove())
-  markers.value = []
+const formatTime = (hour: number, min: number) => 
+  `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`
 
-  shops.forEach(shop => {
-    if (map.value) {
-      const marker = L.marker([shop.location.lat, shop.location.lng])
+function initMap() {
+  const mapElement = document.getElementById('map')
+  console.log('Map element:', mapElement)
+  
+  if (!mapElement) {
+    console.error('Map element not found')
+    return
+  }
+
+  try {
+    map.value = L.map(mapElement).setView([39.8283, -98.5795], 4)
+    console.log('Map instance created:', map.value)
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map.value)
+    
+    console.log('Tile layer added to map')
+  } catch (error) {
+    console.error('Error in map initialization:', error)
+  }
+}
+
+function addMarkers(shops: Shop[]) {
+  console.log('Adding markers for shops:', shops)
+  if (!map.value) {
+    console.error('Map not initialized when adding markers')
+    return
+  }
+
+  try {
+    console.log('Clearing existing markers:', markers.value.length)
+    markers.value.forEach((marker: L.Marker) => marker.remove())
+    markers.value = []
+
+    shops.forEach(shop => {
+      console.log('Creating marker for shop:', shop)
+      const marker = L.marker([shop.lat, shop.lng])
         .bindPopup(`
-          <h3>${shop.type}</h3>
-          <p>${shop.city}</p>
-          <p>营业时间: ${shop.openTime} - ${shop.closeTime}</p>
+          <div class="popup-content">
+            <h3>${shop.city}</h3>
+            <p>类型: ${shop.type}</p>
+            <p>营业时间: ${formatTime(shop.hourStart, shop.minStart)} - ${formatTime(shop.hourClose, shop.minClose)}</p>
+          </div>
         `)
-        .addTo(map.value)
+        .addTo(map.value!)
+      
       markers.value.push(marker)
-    }
-  })
+      console.log('Marker added successfully at:', [shop.lat, shop.lng])
+    })
+
+    console.log('Total markers after addition:', markers.value.length)
+  } catch (error) {
+    console.error('Error in addMarkers:', error)
+  }
 }
 
 // 地图缩放控制
@@ -306,25 +454,58 @@ const uniqueCities = computed(() =>
 )
 
 onMounted(() => {
-  if (!mapContainer.value) return
+  console.log('Component mounted')
+  setTimeout(() => {
+    console.log('Initializing map after delay')
+    initMap()
+  }, 100) // 给DOM一些时间来渲染
+})
 
-  // 使用生成的店铺数据
-  shopList.value = shops
+// 更新店铺数据和标记
+const updateShops = (shops: Shop[]) => {
+  console.log('updateShops called with:', shops)
   
-  // 计算所有店铺的平均位置作为地图中心
-  const avgLat = shops.reduce((sum, shop) => sum + shop.location.lat, 0) / shops.length
-  const avgLng = shops.reduce((sum, shop) => sum + shop.location.lng, 0) / shops.length
-
-  map.value = L.map(mapContainer.value, {
-    zoomControl: false
-  }).setView([avgLat, avgLng], 5) // 调整缩放级别以显示整个中国
+  const processedShops = shops.map(shop => ({
+    ...shop,
+    city: shop.city.toUpperCase()
+  }))
   
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map.value)
+  console.log('Processed shops:', processedShops)
+  shopList.value = processedShops
+  searchResults.value = processedShops
 
-  // 初始显示所有店铺
-  addMarkers(shopList.value)
+  console.log('Adding markers for processed shops')
+  addMarkers(processedShops)
+
+  if (processedShops.length > 0) {
+    console.log('Fitting map to bounds')
+    const latLngs = processedShops.map(shop => [shop.lat, shop.lng])
+    const bounds = L.latLngBounds(latLngs)
+    map.value?.fitBounds(bounds, { padding: [50, 50] })
+  }
+}
+
+// 监听店铺列表变化
+watch(shopList, (newShops) => {
+  console.log('Shop list changed:', newShops)
+  if (newShops.length > 0) {
+    console.log('Adding markers for updated shop list')
+    addMarkers(newShops)
+  }
+}, { deep: true })
+
+// 监听搜索结果变化
+watch(searchResults, (newResults) => {
+  console.log('Search results changed:', newResults)
+  if (newResults.length > 0) {
+    console.log('Adding markers for search results')
+    addMarkers(newResults)
+  }
+}, { deep: true })
+
+// 导出更新方法供父组件调用
+defineExpose({
+  updateShops
 })
 </script>
 
@@ -663,13 +844,33 @@ onMounted(() => {
   border-radius: 8px;
   margin-bottom: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .shop-item:hover {
   background: rgba(255, 255, 255, 1);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.shop-item.active {
+  background: rgba(64, 158, 255, 0.1);
+  border-color: #409EFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+}
+
+.shop-item h4 {
+  margin: 0 0 8px;
+  color: #303133;
+  font-size: 16px;
+}
+
+.shop-item p {
+  margin: 4px 0;
+  color: #606266;
+  font-size: 14px;
 }
 
 .time-mode {
@@ -690,5 +891,58 @@ onMounted(() => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(8px);
   z-index: 1000;
+}
+
+:deep(.el-table__row) {
+  cursor: pointer !important;
+}
+
+:deep(.el-table__body) {
+  cursor: pointer !important;
+}
+
+.result-card {
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.result-card h3 {
+  margin: 0 0 15px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+:deep(.clickable-row) {
+  cursor: pointer !important;
+}
+
+:deep(.el-table) {
+  --el-table-row-hover-bg-color: var(--el-color-primary-light-9);
+  --el-table-current-row-bg-color: var(--el-color-primary-light-8);
+}
+
+:deep(.el-table__row) {
+  cursor: pointer;
+}
+
+:deep(.el-table__row:hover) {
+  background-color: var(--el-table-row-hover-bg-color) !important;
+}
+
+:deep(.el-table__row.current-row) {
+  background-color: var(--el-table-current-row-bg-color) !important;
+  color: var(--el-color-primary);
+}
+
+:deep(.clickable-column) {
+  cursor: pointer;
+}
+
+:deep(.el-table__body td) {
+  cursor: pointer;
 }
 </style>

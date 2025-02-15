@@ -61,7 +61,7 @@ func TestMain(t *testing.T) {
 	// }
 
 	fmt.Println("Query begin!===Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
-	k := 10
+	k := 3
 	result := make([]*[]byte, 0, k)
 	pi := make([]*query.PON, 0, k)
 	query.QueryT(finalRoot, T, &k, 0, rb, &result, &pi)
