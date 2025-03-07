@@ -6,9 +6,15 @@ import (
 	query "TiveQP/Query"
 	resultverification "TiveQP/Resultverification"
 	trapdoor "TiveQP/Trapdoor"
+	"bufio"
 	"fmt"
 	"net/http"
+	"os"
+	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -36,6 +42,12 @@ type Shop struct {
 	MinClose  int     `json:"minClose"`
 }
 
+func isShopOpen(shop Shop, hour, minute int) bool {
+	currentTime := hour*60 + minute
+	shopOpenTime := shop.HourStart*60 + shop.MinStart
+	shopCloseTime := shop.HourClose*60 + shop.MinClose
+	return currentTime >= shopOpenTime && currentTime <= shopCloseTime
+}
 func main() {
 	ibfLength := 200000
 	Keylist := []string{"2938879577741549", "8729598049525437", "8418086888563864", "0128636306393258", "2942091695121238", "6518873307787549"}
@@ -116,6 +128,168 @@ func main() {
 
 		// 返回响应
 		c.JSON(http.StatusOK, shops)
+	})
+
+	// 缓存所有店铺数据
+	var allShops []Shop
+	var shopTypes []string
+	var cities []string
+	var initialized bool
+	var mutex sync.RWMutex
+
+	// 初始化数据的函数
+	initializeData := func() error {
+		mutex.Lock()
+		defer mutex.Unlock()
+
+		if initialized {
+			return nil
+		}
+
+		file, err := os.Open("E:/Github/TiveQP/TiveQP/TiveQP/Data/20k.txt")
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		typeSet := make(map[string]bool)
+		citySet := make(map[string]bool)
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" {
+				continue
+			}
+
+			parts := strings.Split(line, "**")
+			if len(parts) != 8 {
+				continue
+			}
+
+			lat, _ := strconv.ParseFloat(parts[2], 64)
+			lng, _ := strconv.ParseFloat(parts[3], 64)
+			hourStart, _ := strconv.Atoi(parts[4])
+			minStart, _ := strconv.Atoi(parts[5])
+			hourClose, _ := strconv.Atoi(parts[6])
+			minClose, _ := strconv.Atoi(parts[7])
+
+			shop := Shop{
+				Type:      parts[0],
+				City:      parts[1],
+				Lat:       lat,
+				Lng:       lng,
+				HourStart: hourStart,
+				MinStart:  minStart,
+				HourClose: hourClose,
+				MinClose:  minClose,
+			}
+
+			allShops = append(allShops, shop)
+			typeSet[parts[0]] = true
+			citySet[parts[1]] = true
+		}
+
+		// 转换集合为切片
+		for t := range typeSet {
+			shopTypes = append(shopTypes, t)
+		}
+		for c := range citySet {
+			cities = append(cities, c)
+		}
+
+		sort.Strings(shopTypes)
+		sort.Strings(cities)
+
+		initialized = true
+		return scanner.Err()
+	}
+
+	// 获取店铺统计信息
+	r.GET("/api/shops/stats", func(c *gin.Context) {
+		if err := initializeData(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		mutex.RLock()
+		defer mutex.RUnlock()
+
+		// 计算当前营业的店铺数量
+		now := time.Now()
+		currentHour := now.Hour()
+		currentMin := now.Minute()
+		openCount := 0
+		for _, shop := range allShops {
+			if isShopOpen(shop, currentHour, currentMin) {
+				openCount++
+			}
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"totalShops":  len(allShops),
+			"totalTypes":  len(shopTypes),
+			"totalCities": len(cities),
+			"openShops":   openCount,
+			"types":       shopTypes,
+			"cities":      cities,
+		})
+	})
+
+	// 分页获取店铺数据
+	r.GET("/api/shops", func(c *gin.Context) {
+		if err := initializeData(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		mutex.RLock()
+		defer mutex.RUnlock()
+
+		// 获取查询参数
+		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+		pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+		shopType := c.Query("type")
+		city := c.Query("city")
+		timeStr := c.Query("time")
+
+		// 过滤数据
+		var filteredShops []Shop
+		for _, shop := range allShops {
+			if shopType != "" && shop.Type != shopType {
+				continue
+			}
+			if city != "" && shop.City != city {
+				continue
+			}
+			if timeStr != "" {
+				parts := strings.Split(timeStr, ":")
+				if len(parts) == 2 {
+					hour, _ := strconv.Atoi(parts[0])
+					min, _ := strconv.Atoi(parts[1])
+					if !isShopOpen(shop, hour, min) {
+						continue
+					}
+				}
+			}
+			filteredShops = append(filteredShops, shop)
+		}
+
+		// 计算分页
+		total := len(filteredShops)
+		start := (page - 1) * pageSize
+		end := start + pageSize
+		if start >= total {
+			start = total
+		}
+		if end > total {
+			end = total
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"total": total,
+			"data":  filteredShops[start:end],
+		})
 	})
 
 	r.Run(":8080")

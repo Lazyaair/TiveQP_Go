@@ -3,8 +3,8 @@
     <!-- 顶部操作栏 -->
     <div class="action-bar">
       <el-button-group>
-        <el-button type="primary" @click="showUploadDialog">
-          <el-icon><Upload /></el-icon> 上传数据
+        <el-button type="primary" @click="loadShopData">
+          <el-icon><Upload /></el-icon> 加载数据
         </el-button>
         <el-button @click="handleExport">
           <el-icon><Download /></el-icon> 导出数据
@@ -107,13 +107,16 @@
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="55" />
-          <el-table-column prop="name" label="店铺名称" />
-          <el-table-column prop="type" label="类型" width="120" />
+          <el-table-column prop="type" label="店铺类型" width="120" />
           <el-table-column prop="city" label="城市" width="120" />
-          <el-table-column prop="address" label="地址" show-overflow-tooltip />
+          <el-table-column prop="address" label="位置" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ `(${row.lat}, ${row.lng})` }}
+            </template>
+          </el-table-column>
           <el-table-column label="营业时间" width="200">
             <template #default="{ row }">
-              {{ row.openTime }} - {{ row.closeTime }}
+              {{ formatTime(row.hourStart, row.minStart) }} - {{ formatTime(row.hourClose, row.minClose) }}
             </template>
           </el-table-column>
           <el-table-column label="操作" width="150" fixed="right">
@@ -143,33 +146,11 @@
         </div>
       </el-card>
     </div>
-
-    <!-- 上传对话框 -->
-    <el-dialog v-model="uploadDialogVisible" title="上传数据" width="500px">
-      <el-upload
-        class="upload-demo"
-        drag
-        action="/api/upload"
-        :on-success="handleUploadSuccess"
-        :on-error="handleUploadError"
-        accept=".xlsx,.csv"
-      >
-        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-        <div class="el-upload__text">
-          拖拽文件到此处或 <em>点击上传</em>
-        </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            支持 .xlsx 或 .csv 格式的文件
-          </div>
-        </template>
-      </el-upload>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import {
   Upload,
   Download,
@@ -180,9 +161,19 @@ import {
   Search,
   Edit,
   Delete,
-  UploadFilled
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+interface Shop {
+  type: string
+  city: string
+  lat: number
+  lng: number
+  hourStart: number
+  minStart: number
+  hourClose: number
+  minClose: number
+}
 
 // 统计数据
 const statistics = reactive({
@@ -200,7 +191,7 @@ const filterForm = reactive({
 })
 
 // 表格数据
-const tableData = ref([])
+const tableData = ref<Shop[]>([])
 const tableLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
@@ -210,39 +201,50 @@ const total = ref(0)
 const shopTypes = ref(['餐厅', '超市', '便利店', '药店'])
 const cities = ref(['北京', '上海', '广州', '深圳'])
 
-// 上传对话框
-const uploadDialogVisible = ref(false)
-
 // 获取数据
 const fetchData = async () => {
   tableLoading.value = true
   try {
-    // TODO: 调用后端API
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    tableData.value = [
-      {
-        id: '1',
-        name: '示例店铺1',
-        type: '餐厅',
-        city: '北京',
-        address: '示例地址1',
-        openTime: '09:00',
-        closeTime: '22:00'
-      }
-    ]
-    total.value = 100
+    // 构建查询参数
+    const params = new URLSearchParams({
+      page: currentPage.value.toString(),
+      pageSize: pageSize.value.toString(),
+    })
+
+    if (filterForm.types.length === 1) {
+      params.append('type', filterForm.types[0])
+    }
+    if (filterForm.cities.length === 1) {
+      params.append('city', filterForm.cities[0])
+    }
+    if (filterForm.timeRange && filterForm.timeRange.length === 2) {
+      const time = new Date(filterForm.timeRange[0])
+      params.append('time', `${time.getHours()}:${time.getMinutes()}`)
+    }
+
+    const response = await fetch(`http://localhost:8080/api/shops?${params}`)
+    if (!response.ok) {
+      throw new Error('加载数据失败')
+    }
     
-    // 更新统计数据
-    statistics.totalShops = 100
-    statistics.totalCities = 4
-    statistics.totalTypes = 4
-    statistics.openShops = 80
+    const data = await response.json()
+    tableData.value = data.data
+    total.value = data.total
+    
+    ElMessage.success('数据加载成功')
   } catch (error) {
-    ElMessage.error('获取数据失败')
+    ElMessage.error('加载数据失败：' + (error instanceof Error ? error.message : String(error)))
   } finally {
     tableLoading.value = false
   }
+}
+
+// 加载店铺数据
+const loadShopData = async () => {
+  await Promise.all([
+    loadStatistics(),
+    fetchData()
+  ])
 }
 
 // 处理筛选
@@ -271,19 +273,19 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 处理选择
-const handleSelectionChange = (val: any[]) => {
+const handleSelectionChange = (val: Shop[]) => {
   console.log('selected:', val)
 }
 
 // 处理编辑
-const handleEdit = (row: any) => {
+const handleEdit = (row: Shop) => {
   console.log('edit:', row)
 }
 
 // 处理删除
-const handleDelete = (row: any) => {
+const handleDelete = (row: Shop) => {
   ElMessageBox.confirm(
-    `确定要删除店铺 "${row.name}" 吗？`,
+    `确定要删除该店铺吗？`,
     '警告',
     {
       confirmButtonText: '确定',
@@ -307,23 +309,37 @@ const handleExport = () => {
   ElMessage.success('开始导出数据')
 }
 
-// 处理上传
-const showUploadDialog = () => {
-  uploadDialogVisible.value = true
+// 格式化时间
+const formatTime = (hour: number, min: number) => {
+  return `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`
 }
 
-const handleUploadSuccess = () => {
-  ElMessage.success('上传成功')
-  uploadDialogVisible.value = false
-  fetchData()
-}
-
-const handleUploadError = () => {
-  ElMessage.error('上传失败')
+// 修改统计数据获取方式
+const loadStatistics = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/api/shops/stats')
+    if (!response.ok) {
+      throw new Error('加载统计数据失败')
+    }
+    const data = await response.json()
+    statistics.totalShops = data.totalShops
+    statistics.totalCities = data.totalCities
+    statistics.totalTypes = data.totalTypes
+    statistics.openShops = data.openShops
+    
+    // 更新选项数据
+    shopTypes.value = data.types
+    cities.value = data.cities
+  } catch (error) {
+    ElMessage.error('加载统计数据失败：' + (error instanceof Error ? error.message : String(error)))
+  }
 }
 
 // 初始化
-fetchData()
+onMounted(() => {
+  loadStatistics()
+  fetchData()
+})
 </script>
 
 <style scoped>
@@ -332,17 +348,15 @@ fetchData()
   display: flex;
   flex-direction: column;
   background: #f5f7fa;
+  padding: 20px;
 }
 
 .action-bar {
-  padding: 16px;
-  background: white;
-  border-bottom: 1px solid #ebeef5;
+  margin-bottom: 20px;
 }
 
 .main-content {
   flex: 1;
-  padding: 20px;
   overflow-y: auto;
 }
 
@@ -368,7 +382,8 @@ fetchData()
 }
 
 .table-card {
-  margin-bottom: 20px;
+  background: white;
+  border-radius: 8px;
 }
 
 .pagination-container {
@@ -383,9 +398,5 @@ fetchData()
 
 :deep(.el-card__body) {
   padding: 20px;
-}
-
-.upload-demo {
-  text-align: center;
 }
 </style> 

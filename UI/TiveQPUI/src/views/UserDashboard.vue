@@ -44,7 +44,7 @@
             </el-select>
           </el-form-item>
 
-          <el-form-item label="查询时间" class="time-select-item">
+          <el-form-item label="搜索时间" class="time-select-item">
             <el-radio-group v-model="searchForm.timeMode" class="time-mode">
               <el-radio label="current">当前时间</el-radio>
               <el-radio label="specific">指定时间</el-radio>
@@ -58,23 +58,6 @@
                 class="full-width"
               />
             </div>
-          </el-form-item>
-
-          <el-form-item label="搜索范围" class="range-select-item">
-            <div class="range-display">{{ searchForm.radius }}km</div>
-            <el-slider
-              v-model="searchForm.radius"
-              :min="0.5"
-              :max="5"
-              :step="0.5"
-              :marks="{
-                0.5: '0.5km',
-                1: '1km',
-                3: '3km',
-                5: '5km'
-              }"
-              class="range-slider"
-            />
           </el-form-item>
 
           <el-button type="primary" @click="handleSearch" :loading="searchLoading" class="search-btn">
@@ -166,7 +149,7 @@ const searchForm = reactive({
   type: '',
   timeMode: 'current',
   specificTime: new Date(),
-  radius: 1
+  city: ''
 })
 
 // 获取位置
@@ -231,11 +214,13 @@ const handleSearch = async () => {
   
   try {
     // 获取当前时间或指定时间
-    const time = searchForm.timeMode === 'specific' ? searchForm.specificTime : new Date()
+    const time = searchForm.timeMode === 'specific' && searchForm.specificTime 
+      ? searchForm.specificTime 
+      : new Date()
     
     // 构建参数字符串
     const params = [
-      searchForm.type || 'ALL',  // 如果没有选择类型，使用'ALL'
+      searchForm.type || 'ALL',
       locationMode.value === 'auto' ? '自动获取的城市' : selectedCity.value,
       locationMode.value === 'auto' ? currentLocation.value!.latitude.toString() : '33.846335',
       locationMode.value === 'auto' ? currentLocation.value!.longitude.toString() : '-84.3635778',
@@ -416,25 +401,10 @@ if (locationMode.value === 'auto') {
   margin-top: 10px;
 }
 
-.range-select-item {
-  margin-bottom: 25px;
-}
-
-.range-display {
-  text-align: center;
-  font-size: 24px;
-  font-weight: bold;
-  color: #409EFF;
-  margin-bottom: 15px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 8px;
-  padding: 10px;
-}
-
+.range-select-item,
+.range-display,
 .range-slider {
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 8px;
+  display: none;
 }
 
 :deep(.el-slider__marks-text) {
