@@ -2,14 +2,14 @@ package indexbuilding
 
 // city转大写
 type Owner struct {
-	Type      string
-	City      string
-	Lat       float64
-	Lng       float64
-	HourStart int
-	MinStart  int
-	HourClose int
-	MinClose  int
+	Type      string  `json:"type"`
+	City      string  `json:"city"`
+	Lat       float64 `json:"lat"`
+	Lng       float64 `json:"lng"`
+	HourStart int     `json:"hourStart"`
+	MinStart  int     `json:"minStart"`
+	HourClose int     `json:"hourClose"`
+	MinClose  int     `json:"minClose"`
 }
 
 func (o *Owner) TypeEncode() ([]string, error) {

@@ -182,7 +182,7 @@ func (dln *Node) InitLeafNode(owner *indexbuilding.Owner, ibf_length int, Keylis
 	}
 
 	// 计算节点HASH
-	dataText := owner.Type + owner.City +
+	dataText := owner.Type + "**" + owner.City +
 		"**" + strconv.FormatFloat(owner.Lat, 'f', 6, 64) +
 		"**" + strconv.FormatFloat(owner.Lng, 'f', 6, 64) +
 		"**" + strconv.Itoa(owner.HourStart) +

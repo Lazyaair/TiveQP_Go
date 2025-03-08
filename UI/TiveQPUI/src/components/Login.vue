@@ -53,8 +53,9 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, type FormInstance } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
+import type { FormInstance, FormRules } from 'element-plus'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
@@ -65,7 +66,7 @@ const loginForm = reactive({
   password: ''
 })
 
-const rules = reactive({
+const rules = reactive<FormRules>({
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
@@ -79,30 +80,33 @@ const rules = reactive({
 const handleLogin = async () => {
   if (!formRef.value) return
   
-  try {
-    await formRef.value.validate()
-    loading.value = true
-    
-    // 模拟登录成功
-    if (loginForm.username === 'admin' && loginForm.password === '123456') {
-      localStorage.setItem('token', 'dummy-token')
-      ElMessage.success('登录成功')
-      // 确保在路由跳转前等待一下，让消息显示完成
-      setTimeout(() => {
-        router.push('/role-select')
-      }, 500)
+  await formRef.value.validate(async (valid, fields) => {
+    if (valid) {
+      loading.value = true
+      try {
+        // TODO: 调用后端登录API
+        // 模拟API调用
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // 存储token
+        localStorage.setItem('token', 'mock-token')
+        
+        // 清除可能存在的角色信息
+        localStorage.removeItem('role')
+        
+        // 跳转到角色选择页面
+        await router.push('/role-select')
+        
+        ElMessage.success('登录成功')
+      } catch (error) {
+        ElMessage.error('登录失败，请重试')
+      } finally {
+        loading.value = false
+      }
     } else {
-      ElMessage.error('登录失败，用户名或密码错误')
+      console.log('验证失败:', fields)
     }
-  } catch (error) {
-    if (error instanceof Error) {
-      ElMessage.error(error.message)
-    } else {
-      ElMessage.error('登录失败，请稍后重试')
-    }
-  } finally {
-    loading.value = false
-  }
+  })
 }
 </script>
 

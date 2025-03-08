@@ -1,54 +1,55 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../components/Login.vue'
 import RoleSelect from '../components/RoleSelect.vue'
-import ShopMap from '../components/ShopMap.vue'
+import UserDashboard from '../views/UserDashboard.vue'
+import OwnerDashboard from '../views/OwnerDashboard.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
+      redirect: '/login'
+    },
+    {
+      path: '/login',
       name: 'login',
       component: Login
     },
     {
       path: '/role-select',
       name: 'role-select',
-      component: RoleSelect,
-      beforeEnter: (to, from, next) => {
-        const token = localStorage.getItem('token')
-        if (!token) {
-          next('/')
-        } else {
-          next()
-        }
-      }
+      component: RoleSelect
     },
     {
-      path: '/map',
-      name: 'map',
-      component: ShopMap,
-      beforeEnter: (to, from, next) => {
-        const token = localStorage.getItem('token')
-        const role = localStorage.getItem('userRole')
-        if (!token) {
-          next('/')
-        } else if (!role) {
-          next('/role-select')
-        } else {
-          next()
-        }
-      }
+      path: '/user-dashboard',
+      name: 'user-dashboard',
+      component: UserDashboard,
+      meta: { requiresAuth: true, role: 'user' }
+    },
+    {
+      path: '/owner-dashboard',
+      name: 'owner-dashboard',
+      component: OwnerDashboard,
+      meta: { requiresAuth: true, role: 'owner' }
     }
   ]
 })
 
-// 全局前置守卫
+// 路由守卫
 router.beforeEach((to, from, next) => {
-  console.log('Navigation to:', to.path)
-  console.log('Token:', localStorage.getItem('token'))
-  console.log('Role:', localStorage.getItem('userRole'))
-  next()
+  const isAuthenticated = localStorage.getItem('token') // 检查是否已登录
+  const userRole = localStorage.getItem('role') // 获取用户角色
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    // 需要认证但未登录，重定向到登录页
+    next({ name: 'login' })
+  } else if (to.meta.role && to.meta.role !== userRole) {
+    // 角色不匹配，重定向到角色选择页
+    next({ name: 'role-select' })
+  } else {
+    next()
+  }
 })
 
 export default router 
