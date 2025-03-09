@@ -53,7 +53,7 @@ func main() {
 	Keylist := []string{"2938879577741549", "8729598049525437", "8418086888563864", "0128636306393258", "2942091695121238", "6518873307787549"}
 	rb := 235648
 
-	filename := "E:\\Github\\TiveQP\\TiveQP\\TiveQP\\Data\\20k.txt" // 文件名
+	filename := "C:\\Users\\23637\\Downloads\\20k.txt" // 文件名
 	owners, err := construction.LoadOwners(filename)
 	if err != nil {
 		fmt.Println("加载 Owner 数据出错:", err)
@@ -146,7 +146,7 @@ func main() {
 			return nil
 		}
 
-		file, err := os.Open("E:/Github/TiveQP/TiveQP/TiveQP/Data/20k.txt")
+		file, err := os.Open("C:\\Users\\23637\\Downloads\\20k.txt")
 		if err != nil {
 			return err
 		}

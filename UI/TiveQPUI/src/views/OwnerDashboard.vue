@@ -67,7 +67,14 @@
       <el-card class="filter-card">
         <el-form :model="filterForm" :inline="true">
           <el-form-item label="店铺类型">
-            <el-select v-model="filterForm.types" multiple placeholder="选择类型" clearable>
+            <el-select 
+              v-model="filterForm.types" 
+              multiple 
+              placeholder="选择类型" 
+              clearable
+              :popper-append-to-body="false"
+              class="custom-select"
+            >
               <el-option v-for="type in shopTypes" :key="type" :label="type" :value="type" />
             </el-select>
           </el-form-item>
@@ -84,7 +91,14 @@
           </el-form-item>
 
           <el-form-item label="城市">
-            <el-select v-model="filterForm.cities" multiple placeholder="选择城市" clearable>
+            <el-select 
+              v-model="filterForm.cities" 
+              multiple 
+              placeholder="选择城市" 
+              clearable
+              :popper-append-to-body="false"
+              class="custom-select"
+            >
               <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
             </el-select>
           </el-form-item>
@@ -398,5 +412,60 @@ onMounted(() => {
 
 :deep(.el-card__body) {
   padding: 20px;
+}
+
+.custom-select {
+  min-width: 200px;
+  
+  :deep(.el-select__tags) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: calc(100% - 80px) !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  :deep(.el-select__tags-text) {
+    display: inline-block;
+    max-width: none;
+  }
+
+  :deep(.el-input__wrapper) {
+    padding-right: 65px !important;
+  }
+
+  :deep(.el-input__suffix) {
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: absolute;
+    height: 100%;
+    top: 0;
+  }
+
+  :deep(.el-input__suffix-inner) {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    position: static !important;
+  }
+
+  :deep(.el-select__caret.el-icon) {
+    margin: 0;
+    position: static;
+    order: 2;
+    z-index: 1;
+  }
+
+  :deep(.el-select__clear.el-icon) {
+    position: static;
+    order: 1;
+    margin-right: 4px;
+    z-index: 1;
+  }
 }
 </style> 
