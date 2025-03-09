@@ -9,8 +9,8 @@
           <el-tabs v-model="locationMode" class="location-tabs">
             <el-tab-pane label="自动定位" name="auto">
               <div class="location-info" v-if="currentLocation">
-                <p>纬度: {{ currentLocation.latitude }}</p>
-                <p>经度: {{ currentLocation.longitude }}</p>
+                <p>纬度: {{ currentLocation?.latitude }}</p>
+                <p>经度: {{ currentLocation?.longitude }}</p>
               </div>
               <el-button @click="refreshLocation" :loading="locationLoading" class="location-btn">
                 <el-icon><Refresh /></el-icon> 刷新位置
@@ -25,9 +25,9 @@
               >
                 <el-option 
                   v-for="city in cities" 
-                  :key="city.value" 
-                  :label="city.label" 
-                  :value="city.value"
+                  :key="city"
+                  :label="city" 
+                  :value="city"
                 />
               </el-select>
             </el-tab-pane>
@@ -58,6 +58,25 @@
                 class="full-width"
               />
             </div>
+          </el-form-item>
+
+          <el-form-item label="搜索范围" class="range-select-item">
+            <div class="range-display">{{ searchForm.radius }}km</div>
+            <el-slider
+              v-model="searchForm.radius"
+              :min="0"
+              :max="5"
+              :step="0.5"
+              :marks="{
+                0: '0km',
+                1: '1km',
+                2: '2km',
+                3: '3km',
+                4: '4km',
+                5: '5km'
+              }"
+              class="range-slider"
+            />
           </el-form-item>
 
           <el-button type="primary" @click="handleSearch" :loading="searchLoading" class="search-btn">
@@ -103,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Location, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ShopMap from '../components/ShopMap.vue'
@@ -131,25 +150,18 @@ const searchLoading = ref(false)
 const hasSearched = ref(false)
 const searchResults = ref<Shop[]>([])
 const selectedShop = ref<Shop | null>(null)
-const shopTypes = ref(['Restaurants', '超市', '便利店', '药店'])
+const shopTypes = ref<string[]>([])
 const locationMode = ref('auto')
 const selectedCity = ref('')
-
-// 城市数据
-const cities = [
-  { label: 'ATLANTA', value: 'ATLANTA' },
-  { label: '上海', value: 'shanghai' },
-  { label: '广州', value: 'guangzhou' },
-  { label: '深圳', value: 'shenzhen' },
-  // 可以添加更多城市
-]
+const cities = ref<string[]>([])
 
 // 表单数据
 const searchForm = reactive({
   type: '',
   timeMode: 'current',
   specificTime: new Date(),
-  city: ''
+  city: '',
+  radius: 1  // 滑块的初始值已正确定义
 })
 
 // 获取位置
@@ -299,10 +311,30 @@ const formatTime = (hour: number, minute: number) => {
 // 添加地图组件引用
 const mapRef = ref()
 
-// 初始化获取位置
-if (locationMode.value === 'auto') {
-  refreshLocation()
+// 添加加载选项数据的方法
+const loadOptions = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/api/shops/stats')
+    if (!response.ok) {
+      throw new Error('加载数据失败')
+    }
+    const data = await response.json()
+    
+    // 更新选项数据
+    shopTypes.value = data.types
+    cities.value = data.cities
+  } catch (error) {
+    ElMessage.error('加载选项数据失败：' + (error instanceof Error ? error.message : String(error)))
+  }
 }
+
+// 在初始化时调用
+onMounted(() => {
+  loadOptions()
+  if (locationMode.value === 'auto') {
+    refreshLocation()
+  }
+})
 </script>
 
 <style scoped>
@@ -401,10 +433,25 @@ if (locationMode.value === 'auto') {
   margin-top: 10px;
 }
 
-.range-select-item,
-.range-display,
+.range-select-item {
+  margin-bottom: 25px;
+}
+
+.range-display {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #409EFF;
+  margin-bottom: 15px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  padding: 10px;
+}
+
 .range-slider {
-  display: none;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
 }
 
 :deep(.el-slider__marks-text) {
