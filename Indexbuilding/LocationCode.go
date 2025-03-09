@@ -25,6 +25,12 @@ func Projection(minVal, maxVal, currentVal float64) int {
 	// // 向下取整: 使用 Int 来丢弃小数部分
 	// result, _ := scaled.Int(nil) // 转换为整数
 	// return (int(result.Int64()))
+	if currentVal <= minVal {
+		return 0
+	}
+	if currentVal >= maxVal {
+		return splitCount - 1
+	}
 	result := int((currentVal - minVal) / (maxVal - minVal) * float64(splitCount))
 	if result == splitCount {
 		return splitCount - 1
