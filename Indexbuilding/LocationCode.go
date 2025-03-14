@@ -6,10 +6,8 @@ import (
 	"strings"
 )
 
-// 分割段数
-// 位长
-var splitCount = 50
-var bitsize = 12
+var splitCount = 50 // 分割段数
+var bitsize = 12    // 位长
 
 // 区间投影
 func Projection(minVal, maxVal, currentVal float64) int {

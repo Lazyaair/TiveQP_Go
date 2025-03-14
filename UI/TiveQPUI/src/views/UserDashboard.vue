@@ -44,6 +44,18 @@
             </el-select>
           </el-form-item>
 
+          <el-form-item label="最大搜索数量">
+            <el-input-number
+              v-model="searchForm.maxShops"
+              :min="1"
+              :max="100"
+              :step="1"
+              class="full-width"
+              placeholder="请输入最大搜索数量"
+              :controls="false"
+            />
+          </el-form-item>
+
           <el-form-item label="搜索时间" class="time-select-item">
             <el-radio-group v-model="searchForm.timeMode" class="time-mode">
               <el-radio label="current">当前时间</el-radio>
@@ -161,7 +173,8 @@ const searchForm = reactive({
   timeMode: 'current',
   specificTime: new Date(),
   city: '',
-  radius: 1  // 滑块的初始值已正确定义
+  radius: 1,
+  maxShops: undefined  // 使用undefined
 })
 
 // 获取位置
@@ -237,7 +250,8 @@ const handleSearch = async () => {
       locationMode.value === 'auto' ? currentLocation.value!.latitude.toString() : '33.846335',
       locationMode.value === 'auto' ? currentLocation.value!.longitude.toString() : '-84.3635778',
       time.getHours().toString(),
-      time.getMinutes().toString()
+      time.getMinutes().toString(),
+      (searchForm.maxShops === undefined ? 3 : searchForm.maxShops).toString()  // 如果为undefined则使用默认值3
     ].join('**')
 
     console.log('Sending search request with params:', params) // 添加日志

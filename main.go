@@ -87,45 +87,78 @@ func main() {
 		}
 
 		// 打印接收到的参数字符串（调试用）
-		// TODO: 使用参数字符串查询数据库
 		println("Received params:", params)
 		// 去掉前缀
 		cleanedStr := strings.TrimPrefix(params, "/api/message?params=")
+		fmt.Printf("Cleaned params string: %s\n", cleanedStr)
+
+		// 从参数中获取最大店铺数量，并将其从参数字符串中移除
+		parts := strings.Split(cleanedStr, "**")
+		fmt.Printf("Split parts: %v\n", parts)
+
+		k := 3 // 默认值
+		if len(parts) >= 7 {
+			if maxShops, err := strconv.Atoi(parts[6]); err == nil {
+				k = maxShops
+				fmt.Printf("Using maxShops value: %d\n", k)
+			} else {
+				fmt.Printf("Error parsing maxShops: %v\n", err)
+			}
+			// 只保留前6个参数传递给ParseUser
+			cleanedStr = strings.Join(parts[:6], "**")
+			fmt.Printf("Modified params string for ParseUser: %s\n", cleanedStr)
+		}
 
 		u, err := trapdoor.ParseUser(cleanedStr)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("ParseUser error: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "解析用户参数失败: " + err.Error(),
+			})
+			return
 		} else {
-			fmt.Println("User loaded successfully!==Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
+			fmt.Println("User loaded successfully!")
 		}
+
 		T, err := trapdoor.GenT(u, Keylist, rb)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("GenT error: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "生成陷门失败: " + err.Error(),
+			})
+			return
 		} else {
-			fmt.Println("TrapDoor created successfully!==", cleanedStr)
+			fmt.Println("TrapDoor created successfully!")
 		}
-		k := 3
+
 		result := make([]*[]byte, 0, k)
 		pi := make([]*query.PON, 0, k)
 		query.QueryT(finalRoot, T, &k, 0, rb, &result, &pi)
+		fmt.Printf("QueryT completed. Result count: %d\n", len(result))
+
 		fmt.Println("======================================================================")
 		fmt.Println("check HV==", resultverification.CheckHV(finalRoot.HV, pi))
 		fmt.Println("======================================================================")
 		fmt.Println("check Completeness==", resultverification.CheckCompleteness(T, pi))
-		// // 这里返回示例数据
+
 		shops := []indexbuilding.Owner{}
 
 		for _, v := range result {
-			p, _ := construction.Decrypt(*v, []byte("2bc73dw20ebf4d46"))
-			fmt.Println(string(p))
+			p, err := construction.Decrypt(*v, []byte("2bc73dw20ebf4d46"))
+			if err != nil {
+				fmt.Printf("Decrypt error: %v\n", err)
+				continue
+			}
+			fmt.Printf("Decrypted data: %s\n", string(p))
 			o, err := construction.ParseOwner(string(p))
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("ParseOwner error: %v\n", err)
+				continue
 			}
 			shops = append(shops, *o)
-			// fmt.Println("\n========================================")
 		}
 
+		fmt.Printf("Final shops count: %d\n", len(shops))
 		// 返回响应
 		c.JSON(http.StatusOK, shops)
 	})
