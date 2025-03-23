@@ -44,6 +44,18 @@
             </el-select>
           </el-form-item>
 
+          <el-form-item label="最大搜索数量">
+            <el-input-number
+              v-model="searchForm.maxShops"
+              :min="1"
+              :max="100"
+              :step="1"
+              class="full-width"
+              placeholder="请输入最大搜索数量"
+              :controls="false"
+            />
+          </el-form-item>
+
           <el-form-item label="搜索时间" class="time-select-item">
             <el-radio-group v-model="searchForm.timeMode" class="time-mode">
               <el-radio label="current">当前时间</el-radio>
@@ -64,17 +76,17 @@
             <div class="range-display">{{ searchForm.radius }}km</div>
             <el-slider
               v-model="searchForm.radius"
-              :min="0"
+              :min="1"
               :max="5"
-              :step="0.5"
+              :step="1"
               :marks="{
-                0: '0km',
                 1: '1km',
                 2: '2km',
                 3: '3km',
                 4: '4km',
                 5: '5km'
               }"
+              :show-stops="true"
               class="range-slider"
             />
           </el-form-item>
@@ -83,6 +95,18 @@
             <el-icon><Search /></el-icon> 搜索
           </el-button>
         </el-form>
+      </div>
+
+      <!-- 陷门显示按钮 -->
+      <div class="trapdoor-card" v-if="trapdoorInfo">
+        <el-button 
+          type="primary" 
+          class="trapdoor-btn"
+          @click="showTrapdoorDialog = true"
+        >
+          <el-icon><Key /></el-icon>
+          显示陷门
+        </el-button>
       </div>
 
       <!-- 查询结果列表 -->
@@ -118,12 +142,37 @@
         ref="mapRef"
       />
     </div>
+
+    <!-- 陷门内容弹窗 - 移到最外层 -->
+    <teleport to="#app">
+      <el-dialog
+        v-model="showTrapdoorDialog"
+        title="查询陷门"
+        width="80%"
+        :close-on-click-modal="false"
+        class="trapdoor-dialog"
+        append-to-body
+      >
+        <div class="trapdoor-content">
+          <div v-for="(matrix, key) in parsedTrapdoor" :key="key" class="matrix-section">
+            <h4>{{ key }}</h4>
+            <div class="matrix-content">
+              <div v-for="(row, rowIndex) in matrix" :key="rowIndex" class="matrix-row">
+                <div v-for="(cell, cellIndex) in row" :key="cellIndex" class="matrix-cell">
+                  {{ cell }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </el-dialog>
+    </teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { Location, Refresh, Search } from '@element-plus/icons-vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { Location, Refresh, Search, Key } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ShopMap from '../components/ShopMap.vue'
 
@@ -154,6 +203,8 @@ const shopTypes = ref<string[]>([])
 const locationMode = ref('auto')
 const selectedCity = ref('')
 const cities = ref<string[]>([])
+const trapdoorInfo = ref<string>('')
+const showTrapdoorDialog = ref(false)
 
 // 表单数据
 const searchForm = reactive({
@@ -161,7 +212,24 @@ const searchForm = reactive({
   timeMode: 'current',
   specificTime: new Date(),
   city: '',
-  radius: 1  // 滑块的初始值已正确定义
+  radius: 1,
+  maxShops: undefined  // 使用undefined
+})
+
+// 解析陷门数据
+const parsedTrapdoor = computed(() => {
+  if (!trapdoorInfo.value) return null
+  try {
+    const data = JSON.parse(trapdoorInfo.value)
+    return {
+      T1: JSON.parse(data.T1),
+      T2: JSON.parse(data.T2),
+      T3: JSON.parse(data.T3)
+    }
+  } catch (error) {
+    console.error('解析陷门数据失败:', error)
+    return null
+  }
 })
 
 // 获取位置
@@ -237,10 +305,12 @@ const handleSearch = async () => {
       locationMode.value === 'auto' ? currentLocation.value!.latitude.toString() : '33.846335',
       locationMode.value === 'auto' ? currentLocation.value!.longitude.toString() : '-84.3635778',
       time.getHours().toString(),
-      time.getMinutes().toString()
+      time.getMinutes().toString(),
+      (searchForm.maxShops === undefined ? 1 : searchForm.maxShops).toString(),
+      searchForm.radius.toString()  // 添加搜索范围参数
     ].join('**')
 
-    console.log('Sending search request with params:', params) // 添加日志
+    console.log('Sending search request with params:', params)
 
     // 发送GET请求
     const response = await fetch(`http://localhost:8080/api/message?params=${encodeURIComponent(params)}`)
@@ -250,36 +320,59 @@ const handleSearch = async () => {
     }
 
     const data = await response.json()
-    console.log('Received data from API:', data) // 添加日志
+    console.log('Received data from API:', data)
     
     // 处理返回的数据
-    if (data && Array.isArray(data)) {
-      const processedResults = data.map(shop => ({
-        type: shop.type,
-        city: shop.city,
-        lat: shop.lat,
-        lng: shop.lng,
-        hourStart: shop.hourStart,
-        minStart: shop.minStart,
-        hourClose: shop.hourClose,
-        minClose: shop.minClose
-      }))
-
-      console.log('Processed search results:', processedResults) // 添加日志
-      
-      searchResults.value = processedResults
-      // 更新地图标记
-      if (mapRef.value) {
-        console.log('Updating map with results') // 添加日志
-        mapRef.value.updateShops(processedResults)
-      } else {
-        console.error('Map reference not found') // 添加错误日志
+    if (data) {
+      // 更新陷门信息
+      if (data.trapdoor) {
+        // 格式化陷门数据为易读的字符串
+        const formattedTrapdoor = {
+          T1: JSON.stringify(data.trapdoor.t1, null, 2),
+          T2: JSON.stringify(data.trapdoor.t2, null, 2),
+          T3: JSON.stringify(data.trapdoor.t3, null, 2)
+        }
+        trapdoorInfo.value = JSON.stringify(formattedTrapdoor, null, 2)
       }
 
-      if (processedResults.length === 0) {
-        ElMessage.info('未找到符合条件的店铺')
-      } else {
-        ElMessage.success(`找到 ${processedResults.length} 家店铺`)
+      // 处理店铺数据
+      if (Array.isArray(data.shops)) {
+        const processedResults = data.shops.map((shop: {
+          type: string;
+          city: string;
+          lat: number;
+          lng: number;
+          hourStart: number;
+          minStart: number;
+          hourClose: number;
+          minClose: number;
+        }) => ({
+          type: shop.type,
+          city: shop.city,
+          lat: shop.lat,
+          lng: shop.lng,
+          hourStart: shop.hourStart,
+          minStart: shop.minStart,
+          hourClose: shop.hourClose,
+          minClose: shop.minClose
+        }))
+
+        console.log('Processed search results:', processedResults)
+        
+        searchResults.value = processedResults
+        // 更新地图标记
+        if (mapRef.value) {
+          console.log('Updating map with results')
+          mapRef.value.updateShops(processedResults)
+        } else {
+          console.error('Map reference not found')
+        }
+
+        if (processedResults.length === 0) {
+          ElMessage.info('未找到符合条件的店铺')
+        } else {
+          ElMessage.success(`找到 ${processedResults.length} 家店铺`)
+        }
       }
     } else {
       throw new Error('返回数据格式错误')
@@ -288,6 +381,7 @@ const handleSearch = async () => {
     console.error('搜索错误:', error)
     ElMessage.error(error instanceof Error ? error.message : '搜索失败，请重试')
     searchResults.value = []
+    trapdoorInfo.value = ''  // 清空陷门信息
   } finally {
     searchLoading.value = false
   }
@@ -514,6 +608,97 @@ onMounted(() => {
 .no-result {
   margin-top: 40px;
   text-align: center;
+}
+
+.trapdoor-card {
+  margin-bottom: 20px;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.trapdoor-btn {
+  width: 100%;
+  height: 40px;
+  background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.trapdoor-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(91, 134, 229, 0.4);
+}
+
+.trapdoor-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.matrix-section {
+  margin-bottom: 30px;
+}
+
+.matrix-section h4 {
+  margin: 0 0 15px;
+  color: #409EFF;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.matrix-content {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.matrix-row {
+  display: flex;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.matrix-cell {
+  flex: 1;
+  background: rgba(64, 158, 255, 0.1);
+  padding: 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  word-break: break-all;
+  color: #606266;
+}
+
+:deep(.el-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+:deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
+  padding: 20px;
+  margin-right: 0;
+}
+
+:deep(.el-dialog__title) {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+:deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: white;
+}
+
+:deep(.el-dialog__body) {
+  padding: 0;
+  background: #f5f7fa;
 }
 
 @media screen and (max-width: 768px) {

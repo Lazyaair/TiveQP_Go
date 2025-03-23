@@ -42,6 +42,12 @@ type Shop struct {
 	MinClose  int     `json:"minClose"`
 }
 
+// 完整响应数据结构体
+type TiveQPData struct {
+	Shops    []indexbuilding.Owner `json:"shops"`
+	Trapdoor *trapdoor.T           `json:"trapdoor"`
+}
+
 func isShopOpen(shop Shop, hour, minute int) bool {
 	currentTime := hour*60 + minute
 	shopOpenTime := shop.HourStart*60 + shop.MinStart
@@ -52,25 +58,15 @@ func main() {
 	ibfLength := 200000
 	Keylist := []string{"2938879577741549", "8729598049525437", "8418086888563864", "0128636306393258", "2942091695121238", "6518873307787549"}
 	rb := 235648
-
+	lastCount := ""
 	filename := "./Data/20k.txt" // 文件名
 	owners, err := construction.LoadOwners(filename)
 	if err != nil {
 		fmt.Println("加载 Owner 数据出错:", err)
 		return
 	}
-	subroots, err := construction.BuildTreesByChunks(owners, ibfLength, Keylist, rb)
-	if err != nil {
-		fmt.Println("Error building subroots:", err)
-	} else {
-		fmt.Println("Subroots built successfully!")
-	}
-	finalRoot, err := construction.CreateFinalTree(subroots, ibfLength, Keylist, rb)
-	if err != nil {
-		fmt.Println("Error creating final tree:", err)
-	} else {
-		fmt.Println("Final tree created successfully!")
-	}
+	var subroots []*construction.Node
+	var finalRoot *construction.Node
 	r := gin.Default()
 
 	// 启用CORS中间件
@@ -87,47 +83,103 @@ func main() {
 		}
 
 		// 打印接收到的参数字符串（调试用）
-		// TODO: 使用参数字符串查询数据库
 		println("Received params:", params)
 		// 去掉前缀
 		cleanedStr := strings.TrimPrefix(params, "/api/message?params=")
+		fmt.Printf("Cleaned params string: %s\n", cleanedStr)
+
+		// 从参数中获取最大店铺数量，并将其从参数字符串中移除
+		parts := strings.Split(cleanedStr, "**")
+		fmt.Printf("Split parts: %v\n", parts)
+
+		k := 3 // 默认值
+		if len(parts) >= 8 {
+			if maxShops, err := strconv.Atoi(parts[6]); err == nil {
+				k = maxShops
+				fmt.Printf("Using maxShops value: %d\n", k)
+			} else {
+				fmt.Printf("Error parsing maxShops: %v\n", err)
+			}
+			if parts[7] != lastCount {
+				subroots = nil
+				finalRoot = nil
+				lastCount = parts[7]
+				indexbuilding.SplitCount = indexbuilding.LocationMap[parts[7]]
+				indexbuilding.Bitsize = indexbuilding.LocationSizeMap[parts[7]]
+				subroots, err = construction.BuildTreesByChunks(owners, ibfLength, Keylist, rb)
+				if err != nil {
+					fmt.Println("Error building subroots:", err)
+				} else {
+					fmt.Println("Subroots built successfully!")
+				}
+				finalRoot, err = construction.CreateFinalTree(subroots, ibfLength, Keylist, rb)
+				if err != nil {
+					fmt.Println("Error creating final tree:", err)
+				} else {
+					fmt.Println("Final tree created successfully!")
+				}
+			}
+			// 只保留前6个参数传递给ParseUser
+			cleanedStr = strings.Join(parts[:6], "**")
+			fmt.Printf("Modified params string for ParseUser: %s\n", cleanedStr)
+		}
 
 		u, err := trapdoor.ParseUser(cleanedStr)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("ParseUser error: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "解析用户参数失败: " + err.Error(),
+			})
+			return
 		} else {
-			fmt.Println("User loaded successfully!==Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
+			fmt.Println("User loaded successfully!")
 		}
+
 		T, err := trapdoor.GenT(u, Keylist, rb)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("GenT error: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "生成陷门失败: " + err.Error(),
+			})
+			return
 		} else {
-			fmt.Println("TrapDoor created successfully!==", cleanedStr)
+			fmt.Println("TrapDoor created successfully!")
 		}
-		k := 3
+
 		result := make([]*[]byte, 0, k)
 		pi := make([]*query.PON, 0, k)
 		query.QueryT(finalRoot, T, &k, 0, rb, &result, &pi)
+		fmt.Printf("QueryT completed. Result count: %d\n", len(result))
+
 		fmt.Println("======================================================================")
 		fmt.Println("check HV==", resultverification.CheckHV(finalRoot.HV, pi))
 		fmt.Println("======================================================================")
 		fmt.Println("check Completeness==", resultverification.CheckCompleteness(T, pi))
-		// // 这里返回示例数据
+
 		shops := []indexbuilding.Owner{}
 
 		for _, v := range result {
-			p, _ := construction.Decrypt(*v, []byte("2bc73dw20ebf4d46"))
-			fmt.Println(string(p))
+			p, err := construction.Decrypt(*v, []byte("2bc73dw20ebf4d46"))
+			if err != nil {
+				fmt.Printf("Decrypt error: %v\n", err)
+				continue
+			}
+			fmt.Printf("Decrypted data: %s\n", string(p))
 			o, err := construction.ParseOwner(string(p))
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("ParseOwner error: %v\n", err)
+				continue
 			}
 			shops = append(shops, *o)
-			// fmt.Println("\n========================================")
 		}
 
+		fmt.Printf("Final shops count: %d\n", len(shops))
+		response := TiveQPData{
+			Shops:    shops,
+			Trapdoor: T,
+		}
 		// 返回响应
-		c.JSON(http.StatusOK, shops)
+		c.JSON(http.StatusOK, response)
 	})
 
 	// 缓存所有店铺数据
