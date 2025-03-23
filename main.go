@@ -42,6 +42,12 @@ type Shop struct {
 	MinClose  int     `json:"minClose"`
 }
 
+// 完整响应数据结构体
+type TiveQPData struct {
+	Shops    []indexbuilding.Owner `json:"shops"`
+	Trapdoor *trapdoor.T           `json:"trapdoor"`
+}
+
 func isShopOpen(shop Shop, hour, minute int) bool {
 	currentTime := hour*60 + minute
 	shopOpenTime := shop.HourStart*60 + shop.MinStart
@@ -159,8 +165,12 @@ func main() {
 		}
 
 		fmt.Printf("Final shops count: %d\n", len(shops))
+		response := TiveQPData{
+			Shops:    shops,
+			Trapdoor: T,
+		}
 		// 返回响应
-		c.JSON(http.StatusOK, shops)
+		c.JSON(http.StatusOK, response)
 	})
 
 	// 缓存所有店铺数据

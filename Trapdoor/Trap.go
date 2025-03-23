@@ -6,9 +6,9 @@ import (
 )
 
 type T struct {
-	T1 [][]string
-	T2 [][]string
-	T3 [][]string
+	T1 [][]string `json:"t1"`
+	T2 [][]string `json:"t2"`
+	T3 [][]string `json:"t3"`
 }
 
 func GenT(u *indexbuilding.User, keylist []string, rd int) (*T, error) {
