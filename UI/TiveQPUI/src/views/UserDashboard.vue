@@ -76,17 +76,17 @@
             <div class="range-display">{{ searchForm.radius }}km</div>
             <el-slider
               v-model="searchForm.radius"
-              :min="0"
+              :min="1"
               :max="5"
-              :step="0.5"
+              :step="1"
               :marks="{
-                0: '0km',
                 1: '1km',
                 2: '2km',
                 3: '3km',
                 4: '4km',
                 5: '5km'
               }"
+              :show-stops="true"
               class="range-slider"
             />
           </el-form-item>
@@ -306,7 +306,8 @@ const handleSearch = async () => {
       locationMode.value === 'auto' ? currentLocation.value!.longitude.toString() : '-84.3635778',
       time.getHours().toString(),
       time.getMinutes().toString(),
-      (searchForm.maxShops === undefined ? 3 : searchForm.maxShops).toString()  // 如果为undefined则使用默认值3
+      (searchForm.maxShops === undefined ? 1 : searchForm.maxShops).toString(),
+      searchForm.radius.toString()  // 添加搜索范围参数
     ].join('**')
 
     console.log('Sending search request with params:', params)

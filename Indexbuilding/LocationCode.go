@@ -6,8 +6,10 @@ import (
 	"strings"
 )
 
-var splitCount = 50 // 分割段数
-var bitsize = 12    // 位长
+var SplitCount = 50 // 分割段数
+var Bitsize = 12    // 位长
+var LocationMap = map[string]int{"1": 50, "2": 25, "3": 17, "4": 13, "5": 10}
+var LocationSizeMap = map[string]int{"1": 12, "2": 11, "3": 9, "4": 8, "5": 7}
 
 // 区间投影
 func Projection(minVal, maxVal, currentVal float64) int {
@@ -27,11 +29,11 @@ func Projection(minVal, maxVal, currentVal float64) int {
 		return 0
 	}
 	if currentVal >= maxVal {
-		return splitCount - 1
+		return SplitCount - 1
 	}
-	result := int((currentVal - minVal) / (maxVal - minVal) * float64(splitCount))
-	if result == splitCount {
-		return splitCount - 1
+	result := int((currentVal - minVal) / (maxVal - minVal) * float64(SplitCount))
+	if result == SplitCount {
+		return SplitCount - 1
 	} else {
 		return result
 	}
@@ -67,9 +69,9 @@ func LocationEncodingUser(cityName string, lat, lng float64) ([]string, error) {
 	num_lng := Projection(cityBoundary[2], cityBoundary[3], lng)
 
 	// 网格编号
-	place_index := num_lng*splitCount + num_lat
+	place_index := num_lng*SplitCount + num_lat
 
-	return Prefix(bitsize, place_index)
+	return Prefix(Bitsize, place_index)
 }
 
 // 网格分割
@@ -88,75 +90,75 @@ func LocationEncoding(cityName string, lat, lng float64) ([]string, error) {
 	num_lng := Projection(cityBoundary[2], cityBoundary[3], lng)
 
 	// 网格编号
-	place_index := num_lng*splitCount + num_lat
+	place_index := num_lng*SplitCount + num_lat
 
 	result := make([]string, 0, 6)
 	switch {
 	case num_lat == 0 && num_lng == 0:
 		// 左下角
-		n1, _ := Range(bitsize, place_index, place_index+1)
-		n2, _ := Range(bitsize, place_index+splitCount, place_index+splitCount+1)
+		n1, _ := Range(Bitsize, place_index, place_index+1)
+		n2, _ := Range(Bitsize, place_index+SplitCount, place_index+SplitCount+1)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		return result, nil
-	case num_lat == 0 && num_lng == splitCount-1:
+	case num_lat == 0 && num_lng == SplitCount-1:
 		// 左上角
-		n1, _ := Range(bitsize, place_index, place_index+1)
-		n2, _ := Range(bitsize, place_index-splitCount, place_index-splitCount+1)
+		n1, _ := Range(Bitsize, place_index, place_index+1)
+		n2, _ := Range(Bitsize, place_index-SplitCount, place_index-SplitCount+1)
 		result = append(result, n2...)
 		result = append(result, n1...)
 		return result, nil
-	case num_lat == splitCount-1 && num_lng == 0:
+	case num_lat == SplitCount-1 && num_lng == 0:
 		// 右下角
-		n1, _ := Range(bitsize, place_index-1, place_index)
-		n2, _ := Range(bitsize, place_index+splitCount-1, place_index+splitCount)
+		n1, _ := Range(Bitsize, place_index-1, place_index)
+		n2, _ := Range(Bitsize, place_index+SplitCount-1, place_index+SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		return result, nil
-	case num_lat == splitCount-1 && num_lng == splitCount-1:
+	case num_lat == SplitCount-1 && num_lng == SplitCount-1:
 		// 右上角
-		n1, _ := Range(bitsize, place_index-1, place_index)
-		n2, _ := Range(bitsize, place_index-splitCount-1, place_index-splitCount)
+		n1, _ := Range(Bitsize, place_index-1, place_index)
+		n2, _ := Range(Bitsize, place_index-SplitCount-1, place_index-SplitCount)
 		result = append(result, n2...)
 		result = append(result, n1...)
 		return result, nil
-	case num_lat == 0 && num_lng > 0 && num_lng < splitCount-1:
+	case num_lat == 0 && num_lng > 0 && num_lng < SplitCount-1:
 		// 左 边
-		n1, _ := Range(bitsize, place_index-splitCount, place_index-splitCount+1)
-		n2, _ := Range(bitsize, place_index, place_index+1)
-		n3, _ := Range(bitsize, place_index+splitCount, place_index+splitCount+1)
+		n1, _ := Range(Bitsize, place_index-SplitCount, place_index-SplitCount+1)
+		n2, _ := Range(Bitsize, place_index, place_index+1)
+		n3, _ := Range(Bitsize, place_index+SplitCount, place_index+SplitCount+1)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		result = append(result, n3...)
 		return result, nil
-	case num_lat == splitCount-1 && 0 < num_lng && num_lng < splitCount-1:
+	case num_lat == SplitCount-1 && 0 < num_lng && num_lng < SplitCount-1:
 		// 右 边
-		n1, _ := Range(bitsize, place_index-splitCount-1, place_index-splitCount)
-		n2, _ := Range(bitsize, place_index-1, place_index)
-		n3, _ := Range(bitsize, place_index+splitCount-1, place_index+splitCount)
+		n1, _ := Range(Bitsize, place_index-SplitCount-1, place_index-SplitCount)
+		n2, _ := Range(Bitsize, place_index-1, place_index)
+		n3, _ := Range(Bitsize, place_index+SplitCount-1, place_index+SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		result = append(result, n3...)
 		return result, nil
-	case 0 < num_lat && num_lat < splitCount-1 && num_lng == 0:
+	case 0 < num_lat && num_lat < SplitCount-1 && num_lng == 0:
 		// 下 边
-		n1, _ := Range(bitsize, place_index-1, place_index+1)
-		n2, _ := Range(bitsize, place_index+splitCount-1, place_index+splitCount+1)
+		n1, _ := Range(Bitsize, place_index-1, place_index+1)
+		n2, _ := Range(Bitsize, place_index+SplitCount-1, place_index+SplitCount+1)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		return result, nil
-	case 0 < num_lat && num_lat < splitCount-1 && num_lng == splitCount-1:
+	case 0 < num_lat && num_lat < SplitCount-1 && num_lng == SplitCount-1:
 		// 上 边
-		n1, _ := Range(bitsize, place_index-1, place_index+1)
-		n2, _ := Range(bitsize, place_index-splitCount-1, place_index-splitCount+1)
+		n1, _ := Range(Bitsize, place_index-1, place_index+1)
+		n2, _ := Range(Bitsize, place_index-SplitCount-1, place_index-SplitCount+1)
 		result = append(result, n2...)
 		result = append(result, n1...)
 		return result, nil
-	case 0 < num_lat && num_lat < splitCount-1 && 0 < num_lng && num_lng < splitCount-1:
+	case 0 < num_lat && num_lat < SplitCount-1 && 0 < num_lng && num_lng < SplitCount-1:
 		// 中 间
-		n1, _ := Range(bitsize, place_index-splitCount-1, place_index-splitCount+1)
-		n2, _ := Range(bitsize, place_index-1, place_index+1)
-		n3, _ := Range(bitsize, place_index+splitCount-1, place_index+splitCount+1)
+		n1, _ := Range(Bitsize, place_index-SplitCount-1, place_index-SplitCount+1)
+		n2, _ := Range(Bitsize, place_index-1, place_index+1)
+		n3, _ := Range(Bitsize, place_index+SplitCount-1, place_index+SplitCount+1)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		result = append(result, n3...)
@@ -179,81 +181,81 @@ func LocationEncodingComplement(cityName string, lat, lng float64) ([]string, er
 	num_lng := Projection(cityBoundary[2], cityBoundary[3], lng)
 
 	// 网格编号
-	place_index := num_lng*splitCount + num_lat
+	place_index := num_lng*SplitCount + num_lat
 
 	result := make([]string, 0, 6)
 	switch {
 	case num_lat == 0 && num_lng == 0:
 		// 左下角
-		n1, _ := Range(bitsize, place_index+2, place_index+splitCount-1)
-		n2, _ := Range(bitsize, place_index+splitCount+2, splitCount*splitCount)
+		n1, _ := Range(Bitsize, place_index+2, place_index+SplitCount-1)
+		n2, _ := Range(Bitsize, place_index+SplitCount+2, SplitCount*SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		return result, nil
-	case num_lat == 0 && num_lng == splitCount-1:
+	case num_lat == 0 && num_lng == SplitCount-1:
 		// 左上角
-		n1, _ := Range(bitsize, 0, place_index-splitCount-1)
-		n2, _ := Range(bitsize, place_index-splitCount+2, place_index-1)
-		n3, _ := Range(bitsize, place_index+2, splitCount*splitCount)
+		n1, _ := Range(Bitsize, 0, place_index-SplitCount-1)
+		n2, _ := Range(Bitsize, place_index-SplitCount+2, place_index-1)
+		n3, _ := Range(Bitsize, place_index+2, SplitCount*SplitCount)
 		result = append(result, n2...)
 		result = append(result, n1...)
 		result = append(result, n3...)
 		return result, nil
-	case num_lat == splitCount-1 && num_lng == 0:
+	case num_lat == SplitCount-1 && num_lng == 0:
 		// 右下角
-		n1, _ := Range(bitsize, 0, place_index-2)
-		n2, _ := Range(bitsize, place_index+1, place_index+splitCount-2)
-		n3, _ := Range(bitsize, place_index+splitCount+1, splitCount*splitCount)
+		n1, _ := Range(Bitsize, 0, place_index-2)
+		n2, _ := Range(Bitsize, place_index+1, place_index+SplitCount-2)
+		n3, _ := Range(Bitsize, place_index+SplitCount+1, SplitCount*SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		result = append(result, n3...)
 		return result, nil
-	case num_lat == splitCount-1 && num_lng == splitCount-1:
+	case num_lat == SplitCount-1 && num_lng == SplitCount-1:
 		// 右上角
-		n1, _ := Range(bitsize, 0, place_index-splitCount-2)
-		n2, _ := Range(bitsize, place_index-splitCount+1, place_index-2)
+		n1, _ := Range(Bitsize, 0, place_index-SplitCount-2)
+		n2, _ := Range(Bitsize, place_index-SplitCount+1, place_index-2)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		return result, nil
-	case num_lat == 0 && num_lng > 0 && num_lng < splitCount-1:
+	case num_lat == 0 && num_lng > 0 && num_lng < SplitCount-1:
 		// 左 边
-		n1, _ := Range(bitsize, 0, place_index-1)
-		n2, _ := Range(bitsize, place_index+2, place_index+splitCount-1)
-		n3, _ := Range(bitsize, place_index+splitCount+2, splitCount*splitCount)
+		n1, _ := Range(Bitsize, 0, place_index-1)
+		n2, _ := Range(Bitsize, place_index+2, place_index+SplitCount-1)
+		n3, _ := Range(Bitsize, place_index+SplitCount+2, SplitCount*SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		result = append(result, n3...)
 		return result, nil
-	case num_lat == splitCount-1 && 0 < num_lng && num_lng < splitCount-1:
+	case num_lat == SplitCount-1 && 0 < num_lng && num_lng < SplitCount-1:
 		// 右 边
-		n1, _ := Range(bitsize, 0, place_index-splitCount-2)
-		n2, _ := Range(bitsize, place_index-splitCount+1, place_index-2)
-		n3, _ := Range(bitsize, place_index+1, place_index+splitCount-2)
-		n4, _ := Range(bitsize, place_index+splitCount+1, splitCount*splitCount)
+		n1, _ := Range(Bitsize, 0, place_index-SplitCount-2)
+		n2, _ := Range(Bitsize, place_index-SplitCount+1, place_index-2)
+		n3, _ := Range(Bitsize, place_index+1, place_index+SplitCount-2)
+		n4, _ := Range(Bitsize, place_index+SplitCount+1, SplitCount*SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		result = append(result, n3...)
 		result = append(result, n4...)
 		return result, nil
-	case 0 < num_lat && num_lat < splitCount-1 && num_lng == 0:
+	case 0 < num_lat && num_lat < SplitCount-1 && num_lng == 0:
 		// 下 边
-		n1, _ := Range(bitsize, 0, place_index-2)
-		n2, _ := Range(bitsize, place_index+2, splitCount*splitCount)
+		n1, _ := Range(Bitsize, 0, place_index-2)
+		n2, _ := Range(Bitsize, place_index+2, SplitCount*SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		return result, nil
-	case 0 < num_lat && num_lat < splitCount-1 && num_lng == splitCount-1:
+	case 0 < num_lat && num_lat < SplitCount-1 && num_lng == SplitCount-1:
 		// 上 边
-		n1, _ := Range(bitsize, 0, place_index-2)
-		n2, _ := Range(bitsize, place_index+2, splitCount*splitCount)
+		n1, _ := Range(Bitsize, 0, place_index-2)
+		n2, _ := Range(Bitsize, place_index+2, SplitCount*SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		return result, nil
-	case 0 < num_lat && num_lat < splitCount-1 && 0 < num_lng && num_lng < splitCount-1:
+	case 0 < num_lat && num_lat < SplitCount-1 && 0 < num_lng && num_lng < SplitCount-1:
 		// 中 间
-		n1, _ := Range(bitsize, 0, place_index-2)
-		n2, _ := Range(bitsize, place_index+2, place_index+splitCount-2)
-		n3, _ := Range(bitsize, place_index+splitCount+2, splitCount*splitCount)
+		n1, _ := Range(Bitsize, 0, place_index-2)
+		n2, _ := Range(Bitsize, place_index+2, place_index+SplitCount-2)
+		n3, _ := Range(Bitsize, place_index+SplitCount+2, SplitCount*SplitCount)
 		result = append(result, n1...)
 		result = append(result, n2...)
 		result = append(result, n3...)

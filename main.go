@@ -58,25 +58,15 @@ func main() {
 	ibfLength := 200000
 	Keylist := []string{"2938879577741549", "8729598049525437", "8418086888563864", "0128636306393258", "2942091695121238", "6518873307787549"}
 	rb := 235648
-
+	lastCount := ""
 	filename := "./Data/20k.txt" // 文件名
 	owners, err := construction.LoadOwners(filename)
 	if err != nil {
 		fmt.Println("加载 Owner 数据出错:", err)
 		return
 	}
-	subroots, err := construction.BuildTreesByChunks(owners, ibfLength, Keylist, rb)
-	if err != nil {
-		fmt.Println("Error building subroots:", err)
-	} else {
-		fmt.Println("Subroots built successfully!")
-	}
-	finalRoot, err := construction.CreateFinalTree(subroots, ibfLength, Keylist, rb)
-	if err != nil {
-		fmt.Println("Error creating final tree:", err)
-	} else {
-		fmt.Println("Final tree created successfully!")
-	}
+	var subroots []*construction.Node
+	var finalRoot *construction.Node
 	r := gin.Default()
 
 	// 启用CORS中间件
@@ -103,12 +93,31 @@ func main() {
 		fmt.Printf("Split parts: %v\n", parts)
 
 		k := 3 // 默认值
-		if len(parts) >= 7 {
+		if len(parts) >= 8 {
 			if maxShops, err := strconv.Atoi(parts[6]); err == nil {
 				k = maxShops
 				fmt.Printf("Using maxShops value: %d\n", k)
 			} else {
 				fmt.Printf("Error parsing maxShops: %v\n", err)
+			}
+			if parts[7] != lastCount {
+				subroots = nil
+				finalRoot = nil
+				lastCount = parts[7]
+				indexbuilding.SplitCount = indexbuilding.LocationMap[parts[7]]
+				indexbuilding.Bitsize = indexbuilding.LocationSizeMap[parts[7]]
+				subroots, err = construction.BuildTreesByChunks(owners, ibfLength, Keylist, rb)
+				if err != nil {
+					fmt.Println("Error building subroots:", err)
+				} else {
+					fmt.Println("Subroots built successfully!")
+				}
+				finalRoot, err = construction.CreateFinalTree(subroots, ibfLength, Keylist, rb)
+				if err != nil {
+					fmt.Println("Error creating final tree:", err)
+				} else {
+					fmt.Println("Final tree created successfully!")
+				}
 			}
 			// 只保留前6个参数传递给ParseUser
 			cleanedStr = strings.Join(parts[:6], "**")

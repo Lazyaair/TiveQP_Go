@@ -56,7 +56,7 @@ func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int,
 			HV_YCS:   root.HV_YCS,
 		}
 		*pi = append(*pi, poof)
-		fmt.Println("UNN height=", height, "tye=", root.Typ)
+		// fmt.Println("UNN height=", height, "tye=", root.Typ)
 		//root.Print()
 		return
 	}
@@ -74,7 +74,7 @@ func QueryT(root *construction.Node, td *trapdoor.T, k *int, height int, rb int,
 			HV_YCS:   root.HV_YCS,
 		}
 		*pi = append(*pi, poof)
-		fmt.Println("UMN height=", height, "tye=", root.Typ)
+		// fmt.Println("UMN height=", height, "tye=", root.Typ)
 		//root.Print()
 		return
 	}
