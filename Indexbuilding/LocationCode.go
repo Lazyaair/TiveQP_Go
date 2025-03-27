@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	mapset "github.com/deckarep/golang-set"
 )
@@ -75,24 +76,24 @@ func LocationEncodingUser(cityName string, x int, lat, lng float64) ([]string, e
 	// }
 	k_x := x - 1
 	sub_row_start := max(0, num_lat-k_x)
-	sub_row_end := min(49, num_lat+k_x)
+	sub_row_end := min(SplitCount-1, num_lat+k_x)
 	sub_col_start := max(0, num_lng-k_x)
-	sub_col_end := min(49, num_lng+k_x)
+	sub_col_end := min(SplitCount-1, num_lng+k_x)
 
 	result := make([]string, 0, 2*x-1)
 	set := mapset.NewSet()
 
 	for i := sub_row_start; i <= sub_row_end; i++ {
-		// lSet, _ := prefixRangeUniqueWithStars(Bitsize, i*50+sub_col_start, i*50+sub_col_end)
-		// for _, num := range lSet {
-		// 	set.Add(num)
-		// }
-		for j := i*50 + sub_col_start; j <= i*50+sub_col_end; j++ {
-			lSet, _ := Prefix(Bitsize, j)
-			for _, num := range lSet {
-				set.Add(num)
-			}
+		lSet, _ := prefixRangeUniqueWithStars(Bitsize, i*50+sub_col_start, i*50+sub_col_end)
+		for _, num := range lSet {
+			set.Add(num)
 		}
+		// for j := i*SplitCount + sub_col_start; j <= i*SplitCount+sub_col_end; j++ {
+		// 	lSet, _ := Prefix(Bitsize, j)
+		// 	for _, num := range lSet {
+		// 		set.Add(num)
+		// 	}
+		// }
 		// fmt.Println("[", i*50+sub_col_start, ",", i*50+sub_col_end, "]")
 	}
 	for elem := range set.Iter() {
@@ -106,6 +107,10 @@ func LocationEncodingUser(cityName string, x int, lat, lng float64) ([]string, e
 // 坐标编码
 // 对拥有者
 func LocationEncoding(cityName string, lat, lng float64) ([]string, error) {
+	var (
+		mu sync.Mutex
+		wg sync.WaitGroup
+	)
 	cityIndex, err := GetCityIndex(cityName)
 	if err != nil {
 		return nil, fmt.Errorf("city not exists")
@@ -119,19 +124,30 @@ func LocationEncoding(cityName string, lat, lng float64) ([]string, error) {
 
 	result := make([]string, 0, 9)
 	row_start := max(0, num_lat-4)
-	row_end := min(49, num_lat+4)
+	row_end := min(SplitCount-1, num_lat+4)
 	col_start := max(0, num_lng-4)
-	col_end := min(49, num_lng+4)
+	col_end := min(SplitCount-1, num_lng+4)
 	for i := row_start; i <= row_end; i++ {
-		lSet, _ := Range(Bitsize, i*SplitCount+col_start, i*SplitCount+col_end)
-		// fmt.Println("[", i*SplitCount+col_start, ",", i*SplitCount+col_end, "]")
-		result = append(result, lSet...)
+		wg.Add(1)
+		go func(x int) {
+			defer wg.Done()
+			lSet, _ := Range(Bitsize, x*SplitCount+col_start, x*SplitCount+col_end)
+			// fmt.Println("[", i*SplitCount+col_start, ",", i*SplitCount+col_end, "]")
+			mu.Lock()
+			result = append(result, lSet...)
+			mu.Unlock()
+		}(i)
 	}
+	wg.Wait() // 等待所有 goroutine 完成
 	return result, nil
 }
 
 // 对拥有者
 func LocationEncodingComplement(cityName string, lat, lng float64) ([]string, error) {
+	var (
+		mu sync.Mutex
+		wg sync.WaitGroup
+	)
 	cityIndex, err := GetCityIndex(cityName)
 	if err != nil {
 		return nil, fmt.Errorf("city not exists")
@@ -145,41 +161,47 @@ func LocationEncodingComplement(cityName string, lat, lng float64) ([]string, er
 	result := make([]string, 0, 18)
 
 	row_start := max(0, num_lat-4)
-	row_end := min(49, num_lat+4)
+	row_end := min(SplitCount-1, num_lat+4)
 	col_start := max(0, num_lng-4)
-	col_end := min(49, num_lng+4)
+	col_end := min(SplitCount-1, num_lng+4)
 
-	// (1) 下方行和中间行左侧的合并
-	if col_start > 0 {
-		// 合并下方行和中间行左侧第一行
-		if row_start > 0 {
-			lSet, _ := Range(Bitsize, 0, row_start*50+col_start-1)
-			// fmt.Println("[", 0, ",", row_start*50+col_start-1, "]")
+	// 1. 下方行 + 中间行左侧第一行
+	if row_start > 0 || col_start > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			lSet, _ := Range(Bitsize, 0, row_start*SplitCount+col_start-1)
+			mu.Lock()
 			result = append(result, lSet...)
-		}
-
-		// 中间行左侧剩余部分逐行处理
-		for i := row_start + 1; i <= row_end; i++ {
-			lSet, _ := Range(Bitsize, i*50, i*50+col_start-1)
-			// fmt.Println("[", i*50, ",", i*50+col_start-1, "]")
-			result = append(result, lSet...)
-		}
+			mu.Unlock()
+		}()
 	}
 
-	// (2) 中间行右侧和上方行的合并
-	if col_end < 49 {
-		// 中间行右侧的前几行逐行处理
+	// 2. 中间行右侧一行 + 左侧下一行
+	if col_start > 0 && col_end < col_start-1 && row_end > row_start {
 		for i := row_start; i < row_end; i++ {
-			lSet, _ := Range(Bitsize, i*50+col_end+1, i*50+49)
-			// fmt.Println("[", i*50+col_end+1, ",", i*50+49, "]")
-			result = append(result, lSet...)
-		}
-		// 合并中间行右侧最后一行和上方行
-		if row_end < 49 {
-			lSet, _ := Range(Bitsize, row_end*50+col_end+1, 49*50+49)
-			// fmt.Println("[", row_end*50+col_end+1, ",", 49*50+49, "]")
-			result = append(result, lSet...)
+			wg.Add(1)
+			go func(x int) {
+				defer wg.Done()
+				lSet, _ := Range(Bitsize, x*SplitCount+col_end+1, (x+1)*SplitCount+col_start-1)
+				mu.Lock()
+				result = append(result, lSet...)
+				mu.Unlock()
+			}(i)
 		}
 	}
+
+	// 3. 中间行右侧最后一行 + 上方行
+	if col_end < col_start-1 || row_end < col_start-1 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			lSet, _ := Range(Bitsize, row_end*SplitCount+col_end+1, (SplitCount+1)*(SplitCount-1))
+			mu.Lock()
+			result = append(result, lSet...)
+			mu.Unlock()
+		}()
+	}
+	wg.Wait() // 等待所有 goroutine 完成
 	return result, nil
 }

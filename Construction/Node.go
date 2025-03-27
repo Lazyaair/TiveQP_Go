@@ -220,6 +220,8 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 		dmn.HV_LCS[i] = make([][]byte, len(Keylist)-1)
 		InsertCS(dmn.IBF, dmn.LCS[i], &dmn.Bits_LCS[i], Keylist, &dmn.HV_LCS[i], rb)
 	}
+	dmn.Left.LCS = nil
+	dmn.Right.LCS = nil
 
 	dmn.Bits_TCS = make([][]string, len(dmn.TCS))
 	dmn.HV_TCS = make([][][]byte, len(dmn.TCS))
@@ -232,7 +234,8 @@ func (dmn *Node) InitMidNode(ibf_length int, Keylist []string, rb int) error {
 			return fmt.Errorf("IBF:%v,TCS:%v,BITTCS:%v", dmn.IBF, dmn.TCS[i], dmn.Bits_TCS[i])
 		}
 	}
-
+	dmn.Left.TCS = nil
+	dmn.Right.TCS = nil
 	// 计算节点HASH
 	dmn.HV = HashSHA256(append(dmn.Left.HV, dmn.Right.HV...))
 	// 无关字段

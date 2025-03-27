@@ -37,7 +37,7 @@ func BuildTreesByChunks(owners []*indexbuilding.Owner, ibfLength int, Keylist []
 
 			// 初始化子树的根节点（上层叶节点）
 			err = treeRoot.InitUpLeafNode(chunk[0].Type, ibfLength, Keylist, rb)
-			// fmt.Println(chunk[0].Type)
+			fmt.Println(chunk[0].Type)
 			if err != nil {
 				errors <- fmt.Errorf("failed to initialize subroot for chunk %d: %v", idx, err)
 				return
@@ -86,23 +86,23 @@ func BuildTree(owners []*indexbuilding.Owner, ibfLength int, Keylist []string, r
 
 	var leftNode, rightNode *Node
 	var leftErr, rightErr error
-	var wg sync.WaitGroup
+	// var wg sync.WaitGroup
 
-	// 并行构建左右子树
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		leftNode, leftErr = BuildTree(leftOwners, ibfLength, Keylist, rb)
-	}()
+	// // 并行构建左右子树
+	// wg.Add(1)
+	// go func() {
+	// 	defer wg.Done()
+	leftNode, leftErr = BuildTree(leftOwners, ibfLength, Keylist, rb)
+	// }()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		rightNode, rightErr = BuildTree(rightOwners, ibfLength, Keylist, rb)
-	}()
+	// wg.Add(1)
+	// go func() {
+	// 	defer wg.Done()
+	rightNode, rightErr = BuildTree(rightOwners, ibfLength, Keylist, rb)
+	// }()
 
-	// 等待左右子树构建完成
-	wg.Wait()
+	// // 等待左右子树构建完成
+	// wg.Wait()
 
 	if leftErr != nil {
 		return nil, leftErr
