@@ -6,6 +6,68 @@ import (
 	"strings"
 )
 
+type PrefixNode struct {
+	Symbol    []rune // 字符
+	Record    []int  // 记录的指数
+	LeftNode  *PrefixNode
+	RightNode *PrefixNode
+}
+
+func buildPrefixNode(root *PrefixNode, bitsize, a, b, layer int, result *[]string) {
+	if root == nil || len(root.Symbol) <= layer {
+		return
+	}
+	(*result) = append((*result), string(root.Symbol))
+	if bitsize < 0 {
+		return
+	}
+	num := 1 << (bitsize - 1)
+	for _, value := range root.Record {
+		num += 1 << value
+	}
+	if num <= b {
+		root.RightNode = &PrefixNode{
+			Symbol: make([]rune, len(root.Symbol)),             // 字符
+			Record: append([]int{bitsize - 1}, root.Record...), // 记录的指数
+		}
+		copy(root.RightNode.Symbol, root.Symbol)
+		root.RightNode.Symbol[layer] = '1'
+		buildPrefixNode(root.RightNode, bitsize-1, a, b, layer+1, result)
+	}
+	if a <= num {
+		root.LeftNode = &PrefixNode{
+			Symbol: make([]rune, len(root.Symbol)), // 字符
+			Record: root.Record,                    // 记录的指数
+		}
+		copy(root.LeftNode.Symbol, root.Symbol)
+		root.LeftNode.Symbol[layer] = '0'
+		buildPrefixNode(root.LeftNode, bitsize-1, a, b, layer+1, result)
+	}
+}
+
+// prefixRangeUniqueWithStars 生成无重复且包含 * 的前缀族
+func prefixRangeUniqueWithStars(bitsize, a, b int) ([]string, error) { // 使用位移运算计算
+	if (1<<bitsize)-1 < b {
+		return nil, fmt.Errorf("x超出了bitsize位能表示的范围")
+	}
+	// 初始化为空切片
+	var result []string
+	// 初始化 root 节点，使用 bitsize 个 '*'
+	stars := make([]rune, bitsize)
+	for i := range stars {
+		stars[i] = '*'
+	}
+	for i := a; i < b+1; i++ {
+		str := fmt.Sprintf("%0*b", bitsize, i)
+		result = append(result, str)
+	}
+	root := &PrefixNode{
+		Symbol: stars,
+	}
+	buildPrefixNode(root, bitsize, a, b, 0, &result)
+	return result, nil
+}
+
 // Prefix 返回一个数值x的bitsize位前缀族
 func Prefix(bitsize int, x int) ([]string, error) {
 	// 使用位移运算计算

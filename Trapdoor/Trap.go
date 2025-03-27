@@ -11,7 +11,7 @@ type T struct {
 	T3 [][]string `json:"t3"`
 }
 
-func GenT(u *indexbuilding.User, keylist []string, rd int) (*T, error) {
+func GenT(u *indexbuilding.User, keylist []string, rd int, x int) (*T, error) {
 
 	// T1 --- Type
 	type_prefix, err := u.TypeEncode()
@@ -29,7 +29,7 @@ func GenT(u *indexbuilding.User, keylist []string, rd int) (*T, error) {
 	}
 
 	// T2 --- Location
-	location_prefix, err := u.LocationEncode()
+	location_prefix, err := u.LocationEncode(x)
 	if err != nil {
 		return nil, err
 	}

@@ -41,7 +41,7 @@ func TestMain(t *testing.T) {
 	} else {
 		fmt.Println("User loaded successfully!==Restaurants**ATLANTA**33.846335**-84.3635778**12**12")
 	}
-	T, err := trapdoor.GenT(u, Keylist, rb)
+	T, err := trapdoor.GenT(u, Keylist, rb, 1)
 	if err != nil {
 		fmt.Println(err)
 	} else {

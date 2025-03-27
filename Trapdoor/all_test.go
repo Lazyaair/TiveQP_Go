@@ -13,7 +13,7 @@ func TestMain(t *testing.T) {
 	}
 	Keylist := []string{"2938879577741549", "8729598049525437", "8418086888563864", "0128636306393258", "2942091695121238", "6518873307787549"}
 	rb := 235648
-	T, err := GenT(u, Keylist, rb)
+	T, err := GenT(u, Keylist, rb, 3)
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -14,8 +14,8 @@ func (u *User) TypeEncode() ([]string, error) {
 	return TypeEncoding(u.Type)
 }
 
-func (u *User) LocationEncode() ([]string, error) {
-	locationCode, err := LocationEncodingUser(u.City, u.Lat, u.Lng)
+func (u *User) LocationEncode(x int) ([]string, error) {
+	locationCode, err := LocationEncodingUser(u.City, x, u.Lat, u.Lng)
 	if err != nil {
 		return nil, err
 	}
