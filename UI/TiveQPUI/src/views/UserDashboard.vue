@@ -154,12 +154,20 @@
         append-to-body
       >
         <div class="trapdoor-content">
-          <div v-for="(matrix, key) in parsedTrapdoor" :key="key" class="matrix-section">
-            <h4>{{ key }}</h4>
-            <div class="matrix-content">
-              <div v-for="(row, rowIndex) in matrix" :key="rowIndex" class="matrix-row">
-                <div v-for="(cell, cellIndex) in row" :key="cellIndex" class="matrix-cell">
-                  {{ cell }}
+          <div class="trapdoor-title">
+            <h3>陷门 T</h3>
+          </div>
+          <div class="trapdoor-matrices">
+            <div v-for="(matrix, key) in parsedTrapdoor" :key="key" class="matrix-section">
+              <div class="matrix-header">
+                <h4>{{ key }}</h4>
+                <div class="matrix-type">{{ getMatrixType(key) }}</div>
+              </div>
+              <div class="matrix-content">
+                <div v-for="(row, rowIndex) in matrix" :key="rowIndex" class="matrix-row">
+                  <div v-for="(cell, cellIndex) in row" :key="cellIndex" class="matrix-cell">
+                    {{ cell }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -429,6 +437,19 @@ onMounted(() => {
     refreshLocation()
   }
 })
+
+const getMatrixType = (key: string) => {
+  switch (key) {
+    case 'T1':
+      return '类型'
+    case 'T2':
+      return '位置'
+    case 'T3':
+      return '时间'
+    default:
+      return ''
+  }
+}
 </script>
 
 <style scoped>
@@ -636,46 +657,94 @@ onMounted(() => {
 }
 
 .trapdoor-content {
-  max-height: 60vh;
+  max-height: 70vh;
   overflow-y: auto;
+  padding: 20px;
+  background: #f5f7fa;
+}
+
+.trapdoor-title {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 15px;
+  background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
+  border-radius: 8px;
+  color: white;
+}
+
+.trapdoor-title h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.trapdoor-matrices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
   padding: 20px;
 }
 
 .matrix-section {
-  margin-bottom: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
-.matrix-section h4 {
-  margin: 0 0 15px;
+.matrix-header {
+  background: rgba(64, 158, 255, 0.1);
+  padding: 15px;
+  border-bottom: 1px solid rgba(64, 158, 255, 0.2);
+}
+
+.matrix-header h4 {
+  margin: 0;
   color: #409EFF;
   font-size: 18px;
   font-weight: 600;
 }
 
+.matrix-type {
+  font-size: 14px;
+  color: #606266;
+  margin-top: 5px;
+}
+
 .matrix-content {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
   padding: 15px;
+  background: white;
 }
 
 .matrix-row {
   display: flex;
-  margin-bottom: 10px;
-  gap: 10px;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.matrix-row:last-child {
+  margin-bottom: 0;
 }
 
 .matrix-cell {
   flex: 1;
-  background: rgba(64, 158, 255, 0.1);
+  background: rgba(64, 158, 255, 0.05);
   padding: 8px;
   border-radius: 4px;
   font-family: monospace;
   font-size: 12px;
   word-break: break-all;
   color: #606266;
+  text-align: center;
 }
 
-:deep(.el-dialog) {
+@media screen and (max-width: 1200px) {
+  .trapdoor-matrices {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trapdoor-dialog {
   border-radius: 16px;
   overflow: hidden;
 }

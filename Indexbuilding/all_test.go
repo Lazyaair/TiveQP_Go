@@ -72,7 +72,7 @@ func TestLocationEncoding(t *testing.T) {
 	lng := -71.1389101
 	locationCode, _ := LocationEncoding(cityName, lat, lng)
 	fmt.Println("Code          :", locationCode)
-	UserCode, _ := LocationEncodingUser(cityName, 5, lat, lng)
+	UserCode, _ := LocationEncodingUser(cityName, 2, lat, lng)
 	fmt.Println("UserCode      :", UserCode)
 	fmt.Println(haveCommonElements(locationCode, UserCode))
 	locationCodeComplement, _ := LocationEncodingComplement(cityName, lat, lng)
