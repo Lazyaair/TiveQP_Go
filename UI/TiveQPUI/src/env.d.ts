@@ -2,9 +2,16 @@
 /// <reference types="element-plus/global" />
 
 declare module '*.vue' {
-  import { DefineComponent } from 'vue'
+  import type { DefineComponent } from 'vue'
   const component: DefineComponent<{}, {}, any>
   export default component
+}
+
+// particles.js 类型声明
+declare global {
+  interface Window {
+    particlesJS: (id: string, config: any) => void
+  }
 }
 
 declare module 'leaflet' {

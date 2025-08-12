@@ -1,5 +1,8 @@
 <template>
   <div class="login-container">
+    <!-- 粒子背景容器 -->
+    <div id="particles-js" class="particles-container"></div>
+    
     <div class="login-box">
       <div class="login-form">
         <h1 class="title">TiveQP</h1>
@@ -51,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
@@ -76,6 +79,120 @@ const rules = reactive<FormRules>({
     { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
   ]
 })
+
+// 初始化粒子背景
+const initParticles = () => {
+  // 动态加载 particles.js
+  const script = document.createElement('script')
+  script.src = '/js/particles.min.js'
+  script.onload = () => {
+    // @ts-ignore
+    if (window.particlesJS) {
+      // @ts-ignore
+      window.particlesJS('particles-js', {
+        "particles": {
+          "number": {
+            "value": 80,
+            "density": {
+              "enable": true,
+              "value_area": 800
+            }
+          },
+          "color": {
+            "value": "#ffffff"
+          },
+          "shape": {
+            "type": "circle",
+            "stroke": {
+              "width": 0,
+              "color": "#000000"
+            }
+          },
+          "opacity": {
+            "value": 0.3,
+            "random": false,
+            "anim": {
+              "enable": false,
+              "speed": 1,
+              "opacity_min": 0.1,
+              "sync": false
+            }
+          },
+          "size": {
+            "value": 3,
+            "random": true,
+            "anim": {
+              "enable": false,
+              "speed": 40,
+              "size_min": 0.1,
+              "sync": false
+            }
+          },
+          "line_linked": {
+            "enable": true,
+            "distance": 150,
+            "color": "#ffffff",
+            "opacity": 0.2,
+            "width": 1
+          },
+          "move": {
+            "enable": true,
+            "speed": 4,
+            "direction": "none",
+            "random": false,
+            "straight": false,
+            "out_mode": "out",
+            "attract": {
+              "enable": false,
+              "rotateX": 600,
+              "rotateY": 1200
+            }
+          }
+        },
+        "interactivity": {
+          "detect_on": "canvas",
+          "events": {
+            "onhover": {
+              "enable": true,
+              "mode": "repulse"
+            },
+            "onclick": {
+              "enable": true,
+              "mode": "push"
+            },
+            "resize": true
+          },
+          "modes": {
+            "grab": {
+              "distance": 400,
+              "line_linked": {
+                "opacity": 1
+              }
+            },
+            "bubble": {
+              "distance": 400,
+              "size": 40,
+              "duration": 2,
+              "opacity": 8,
+              "speed": 3
+            },
+            "repulse": {
+              "distance": 200
+            },
+            "push": {
+              "particles_nb": 4
+            },
+            "remove": {
+              "particles_nb": 2
+            }
+          }
+        },
+        "retina_detect": true
+      })
+    }
+  }
+  document.head.appendChild(script)
+}
 
 const handleLogin = async () => {
   if (!formRef.value) return
@@ -108,91 +225,85 @@ const handleLogin = async () => {
     }
   })
 }
+
+onMounted(() => {
+  initParticles()
+})
 </script>
 
 <style scoped>
 .login-container {
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
   position: relative;
   overflow: hidden;
 }
 
-.login-container::before {
-  content: '';
+.particles-container {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
 }
 
 .login-box {
+  position: relative;
+  z-index: 2;
   width: 400px;
   padding: 40px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(12px);
-  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  transform: translateY(0);
-  position: relative;
-  z-index: 1;
+  transition: all 0.3s ease;
 }
 
 .login-box:hover {
   transform: translateY(-5px);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.login-form {
+  text-align: center;
 }
 
 .title {
-  text-align: center;
   font-size: 32px;
-  background: linear-gradient(135deg, #5b86e5, #36d1dc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0 0 8px;
-  font-weight: 600;
-  letter-spacing: 2px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .subtitle {
-  text-align: center;
-  color: #5b86e5;
-  margin: 0 0 30px;
   font-size: 16px;
-  font-weight: 500;
+  color: #666;
+  margin-bottom: 30px;
 }
 
 .form {
-  margin-top: 30px;
+  margin-top: 20px;
 }
 
 :deep(.el-input__wrapper) {
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
-  padding: 8px 15px;
   background: rgba(255, 255, 255, 0.9);
   border: 2px solid transparent;
   transition: all 0.3s ease;
-  box-shadow: none;
 }
 
 :deep(.el-input__wrapper:hover) {
-  background: rgba(243, 244, 246, 0.9);
-  border-color: rgba(102, 126, 234, 0.1);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 :deep(.el-input__wrapper.is-focus) {
   background: #ffffff;
   border-color: #667eea;
-  box-shadow: 0 0 0 1px #5b86e5;
 }
 
 :deep(.el-input__inner) {
@@ -210,19 +321,16 @@ const handleLogin = async () => {
 
 .login-button {
   width: 100%;
-  height: 44px;
+  height: 40px;
   font-size: 16px;
-  margin-top: 20px;
-  background: linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
   transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
 }
 
 .login-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(91, 134, 229, 0.4);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 .login-button:active {

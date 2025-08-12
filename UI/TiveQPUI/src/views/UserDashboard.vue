@@ -38,10 +38,36 @@
       <!-- 查询条件 -->
       <div class="filter-card">
         <el-form :model="searchForm" label-position="top">
-          <el-form-item label="店铺类型">
-            <el-select v-model="searchForm.type" placeholder="选择店铺类型" clearable class="full-width">
+          <el-form-item label="店铺类型（可多选）">
+            <el-select
+              v-model="searchForm.types"
+              placeholder="请选择店铺类型（可多选）"
+              class="full-width"
+              filterable
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+            >
               <el-option v-for="type in shopTypes" :key="type" :label="type" :value="type" />
             </el-select>
+            <div v-if="searchForm.types.length" class="per-type-settings">
+              <div class="per-type-row" v-for="t in searchForm.types" :key="'row-' + t">
+                <span class="per-type-label">{{ t }}</span>
+                <el-input-number
+                  v-model.number="radiusByType[t]"
+                  :min="RADIUS_MIN"
+                  :max="RADIUS_MAX"
+                  :step="1"
+                  :controls="false"
+                  class="per-type-input"
+                  placeholder="距离 (km)"
+                  @change="() => validateRadius(t)"
+                  @blur="() => validateRadius(t)"
+                />
+                <span class="per-type-unit">km</span>
+              </div>
+              <div class="hint">每个类型可设置独立范围；未设置时使用下方默认范围</div>
+            </div>
           </el-form-item>
 
           <el-form-item label="最大搜索数量">
@@ -72,28 +98,24 @@
             </div>
           </el-form-item>
 
-          <el-form-item label="搜索范围" class="range-select-item">
+          <el-form-item label="默认搜索范围" class="range-select-item">
             <div class="range-display">{{ searchForm.radius }}km</div>
-            <el-slider
-              v-model="searchForm.radius"
-              :min="1"
-              :max="5"
-              :step="1"
-              :marks="{
-                1: '1km',
-                2: '2km',
-                3: '3km',
-                4: '4km',
-                5: '5km'
-              }"
-              :show-stops="true"
-              class="range-slider"
-            />
+            <el-input
+              v-model.number="searchForm.radius"
+              type="number"
+              placeholder="请输入搜索范围（km）"
+              class="full-width"
+              @change="() => validateRadius()"
+              @blur="() => validateRadius()"
+            >
+              <template #suffix>km</template>
+            </el-input>
           </el-form-item>
 
           <el-button type="primary" @click="handleSearch" :loading="searchLoading" class="search-btn">
             <el-icon><Search /></el-icon> 搜索
           </el-button>
+          <div v-if="lastQueryTime" class="query-time">上次查询时间：{{ lastQueryTime }}</div>
         </el-form>
       </div>
 
@@ -181,7 +203,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { Location, Refresh, Search, Key } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import ShopMap from '../components/ShopMap.vue'
 
 interface Location {
@@ -213,6 +235,8 @@ const selectedCity = ref('')
 const cities = ref<string[]>([])
 const trapdoorInfo = ref<string>('')
 const showTrapdoorDialog = ref(false)
+const lastQueryTime = ref<string>('')
+const mapRef = ref()
 
 // 表单数据
 const searchForm = reactive({
@@ -221,8 +245,55 @@ const searchForm = reactive({
   specificTime: new Date(),
   city: '',
   radius: 1,
-  maxShops: undefined  // 使用undefined
+  maxShops: undefined,  // 使用undefined
+  types: [] as string[]
 })
+
+const RADIUS_MIN = 1
+const RADIUS_MAX = 5
+
+// 每类型的范围设置
+const radiusByType = reactive<Record<string, number>>({})
+
+const validateRadius = (typeKey?: string): boolean => {
+  const applyClamp = (val: number) => {
+    const rounded = Math.round(val)
+    return Math.min(Math.max(rounded, RADIUS_MIN), RADIUS_MAX)
+  }
+
+  if (typeKey) {
+    const raw = Number(radiusByType[typeKey])
+    if (isNaN(raw)) {
+      ElMessageBox.alert(`请输入有效的范围（${RADIUS_MIN} - ${RADIUS_MAX} km）`, '范围无效')
+      radiusByType[typeKey] = searchForm.radius
+      return false
+    }
+    const clamped = applyClamp(raw)
+    if (clamped !== raw) {
+      ElMessageBox.alert(`搜索范围应在 ${RADIUS_MIN} - ${RADIUS_MAX} km 之间，已自动调整为 ${clamped} km`, '范围超出')
+      radiusByType[typeKey] = clamped
+      return true
+    }
+    radiusByType[typeKey] = clamped
+    return true
+  }
+
+  // 校验默认范围
+  const raw = Number(searchForm.radius)
+  if (isNaN(raw)) {
+    ElMessageBox.alert(`请输入有效的范围（${RADIUS_MIN} - ${RADIUS_MAX} km）`, '范围无效')
+    searchForm.radius = RADIUS_MIN
+    return false
+  }
+  const clamped = applyClamp(raw)
+  if (clamped !== raw) {
+    ElMessageBox.alert(`搜索范围应在 ${RADIUS_MIN} - ${RADIUS_MAX} km 之间，已自动调整为 ${clamped} km`, '范围超出')
+    searchForm.radius = clamped
+    return true
+  }
+  searchForm.radius = clamped
+  return true
+}
 
 // 解析陷门数据
 const parsedTrapdoor = computed(() => {
@@ -297,6 +368,9 @@ const handleSearch = async () => {
     return
   }
 
+  // 校验搜索范围
+  validateRadius()
+
   searchLoading.value = true
   hasSearched.value = true
   
@@ -306,44 +380,51 @@ const handleSearch = async () => {
       ? searchForm.specificTime 
       : new Date()
     
-    // 构建参数字符串
-    const params = [
-      searchForm.type || 'ALL',
-      locationMode.value === 'auto' ? '自动获取的城市' : selectedCity.value,
-      locationMode.value === 'auto' ? currentLocation.value!.latitude.toString() : '33.846335',
-      locationMode.value === 'auto' ? currentLocation.value!.longitude.toString() : '-84.3635778',
-      time.getHours().toString(),
-      time.getMinutes().toString(),
-      (searchForm.maxShops === undefined ? 1 : searchForm.maxShops).toString(),
-      searchForm.radius.toString()  // 添加搜索范围参数
-    ].join('**')
+    // 选择查询的类型：优先使用多选；否则使用单选；都没有则用 ALL
+    const selectedTypes: string[] = (searchForm.types && searchForm.types.length > 0)
+      ? [...searchForm.types]
+      : (searchForm.type ? [searchForm.type] : ['ALL'])
 
-    console.log('Sending search request with params:', params)
+    const allResults: Shop[] = []
 
-    // 发送GET请求
-    const response = await fetch(`http://localhost:8080/api/message?params=${encodeURIComponent(params)}`)
+    // 依次发送请求并合并
+    for (const typeItem of selectedTypes) {
+      const effectiveRadius = typeItem !== 'ALL' && radiusByType[typeItem] ? radiusByType[typeItem] : searchForm.radius
+      // 对每个类型也校验一次范围
+      validateRadius(typeItem !== 'ALL' ? typeItem : undefined)
+      const params = [
+        typeItem,
+        locationMode.value === 'auto' ? '自动获取的城市' : selectedCity.value,
+        locationMode.value === 'auto' ? currentLocation.value!.latitude.toString() : '33.846335',
+        locationMode.value === 'auto' ? currentLocation.value!.longitude.toString() : '-84.3635778',
+        time.getHours().toString(),
+        time.getMinutes().toString(),
+        (searchForm.maxShops === undefined ? 1 : searchForm.maxShops).toString(),
+        effectiveRadius.toString()
+      ].join('**')
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
+      console.log('Sending search request with params:', params)
+      const response = await fetch(`http://localhost:8080/api/message?params=${encodeURIComponent(params)}`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      console.log('Received data from API:', data)
 
-    const data = await response.json()
-    console.log('Received data from API:', data)
-    
-    // 处理返回的数据
-    if (data) {
-      // 更新陷门信息
+      if (!data) {
+        throw new Error('返回数据格式错误')
+      }
+
       if (data.trapdoor) {
-        // 格式化陷门数据为易读的字符串
         const formattedTrapdoor = {
           T1: JSON.stringify(data.trapdoor.t1, null, 2),
           T2: JSON.stringify(data.trapdoor.t2, null, 2),
           T3: JSON.stringify(data.trapdoor.t3, null, 2)
         }
+        // 显示最后一次查询的陷门
         trapdoorInfo.value = JSON.stringify(formattedTrapdoor, null, 2)
       }
 
-      // 处理店铺数据
       if (Array.isArray(data.shops)) {
         const processedResults = data.shops.map((shop: {
           type: string;
@@ -364,26 +445,36 @@ const handleSearch = async () => {
           hourClose: shop.hourClose,
           minClose: shop.minClose
         }))
-
-        console.log('Processed search results:', processedResults)
-        
-        searchResults.value = processedResults
-        // 更新地图标记
-        if (mapRef.value) {
-          console.log('Updating map with results')
-          mapRef.value.updateShops(processedResults)
-        } else {
-          console.error('Map reference not found')
-        }
-
-        if (processedResults.length === 0) {
-          ElMessage.info('未找到符合条件的店铺')
-        } else {
-          ElMessage.success(`找到 ${processedResults.length} 家店铺`)
-        }
+        allResults.push(...processedResults)
       }
+    }
+
+    // 去重合并结果
+    const seen = new Set<string>()
+    const merged: Shop[] = []
+    for (const s of allResults) {
+      const key = `${s.type}|${s.city}|${s.lat}|${s.lng}|${s.hourStart}|${s.minStart}|${s.hourClose}|${s.minClose}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        merged.push(s)
+      }
+    }
+
+    console.log('Merged search results:', merged)
+    searchResults.value = merged
+
+    // 更新地图标记
+    if (mapRef.value) {
+      console.log('Updating map with merged results')
+      mapRef.value.updateShops(merged)
     } else {
-      throw new Error('返回数据格式错误')
+      console.error('Map reference not found')
+    }
+
+    if (merged.length === 0) {
+      ElMessage.info('未找到符合条件的店铺')
+    } else {
+      ElMessage.success(`找到 ${merged.length} 家店铺（已合并）`)
     }
   } catch (error) {
     console.error('搜索错误:', error)
@@ -392,6 +483,28 @@ const handleSearch = async () => {
     trapdoorInfo.value = ''  // 清空陷门信息
   } finally {
     searchLoading.value = false
+    // 记录查询时间（当前时间）
+    const currentTime = new Date().toLocaleString()
+    const previousTime = lastQueryTime.value
+    lastQueryTime.value = currentTime
+    
+    // 显示查询完成弹窗
+    ElMessageBox.alert(
+      '<div style="text-align: center; padding: 20px;">' +
+        '<h3 style="color: #409EFF; margin-bottom: 16px;">查询完成</h3>' +
+        '<div style="margin-bottom: 12px;">' +
+          '<strong>当前查询时间：</strong><br>' +
+          '<span style="color: #67c23a;">' + currentTime + '</span>' +
+        '</div>' +
+        (previousTime ? '<div><strong>上次查询时间：</strong><br><span style="color: #909399;">' + previousTime + '</span></div>' : '') +
+      '</div>',
+      '查询时间信息',
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '确定',
+        customClass: 'query-time-dialog'
+      }
+    )
   }
 }
 
@@ -411,7 +524,7 @@ const formatTime = (hour: number, minute: number) => {
 }
 
 // 添加地图组件引用
-const mapRef = ref()
+
 
 // 添加加载选项数据的方法
 const loadOptions = async () => {
@@ -531,6 +644,17 @@ const getMatrixType = (key: string) => {
   margin-bottom: 25px;
 }
 
+.multi-type {
+  margin-top: 10px;
+}
+
+.per-type-settings { margin-top: 10px; }
+.per-type-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.per-type-label { min-width: 140px; color: #606266; }
+.per-type-input { width: 120px; }
+.per-type-unit { color: #909399; }
+.hint { color: #909399; font-size: 12px; }
+
 .time-mode {
   margin-bottom: 15px;
   width: 100%;
@@ -561,6 +685,13 @@ const getMatrixType = (key: string) => {
   background: rgba(255, 255, 255, 0.5);
   border-radius: 8px;
   padding: 10px;
+}
+
+.query-time {
+  margin-top: 8px;
+  text-align: center;
+  color: #606266;
+  font-size: 12px;
 }
 
 .range-slider {

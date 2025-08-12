@@ -13,6 +13,80 @@
     </div>
 
     <div class="main-content">
+      <!-- 数据上传区域 -->
+      <el-card class="upload-card">
+        <template #header>
+          <div class="upload-header">
+            <el-icon><Upload /></el-icon>
+            <span>数据文件上传</span>
+          </div>
+        </template>
+        
+        <div class="upload-content">
+          <div class="upload-section">
+            <el-upload
+              class="upload-area"
+              :auto-upload="false"
+              :limit="1"
+              :on-change="handleFileChange"
+              :file-list="fileList"
+              :disabled="uploading"
+            >
+              <div class="upload-placeholder">
+                <el-icon class="upload-icon"><FolderOpened /></el-icon>
+                <div class="upload-text">
+                  <p>点击选择文件或拖拽文件到此处</p>
+                  <p class="upload-hint">支持与 20k.txt 相同格式，每行 8 段用 ** 分隔</p>
+                </div>
+              </div>
+            </el-upload>
+            
+            <el-button 
+              type="primary" 
+              class="upload-btn" 
+              :loading="uploading" 
+              :disabled="!selectedFile || uploading"
+              @click="submitUpload"
+            >
+              {{ uploading ? '处理中...' : '开始上传并构建索引' }}
+            </el-button>
+          </div>
+          
+          <!-- 进度显示区域 -->
+          <div v-if="uploading || uploadProgress.length > 0" class="progress-section">
+            <h4>处理进度</h4>
+            <div class="progress-list">
+              <div 
+                v-for="(step, index) in uploadProgress" 
+                :key="index"
+                class="progress-item"
+                :class="{ 
+                  'completed': step.status === 'success',
+                  'error': step.status === 'error',
+                  'pending': step.status === 'pending'
+                }"
+              >
+                <el-icon class="progress-icon">
+                  <Check v-if="step.status === 'success'" />
+                  <Close v-else-if="step.status === 'error'" />
+                  <Loading v-else-if="step.status === 'pending'" />
+                  <CircleCheck v-else />
+                </el-icon>
+                <span class="progress-text">{{ step.message }}</span>
+                <span v-if="step.status === 'pending'" class="progress-time">{{ step.time }}</span>
+              </div>
+            </div>
+            
+            <el-progress 
+              v-if="uploading"
+              :percentage="progressPercentage" 
+              :status="progressStatus"
+              class="progress-bar"
+            />
+          </div>
+        </div>
+      </el-card>
+
       <!-- 统计卡片 -->
       <div class="stat-cards">
         <el-row :gutter="20">
@@ -164,7 +238,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import {
   Upload,
   Download,
@@ -175,6 +249,11 @@ import {
   Search,
   Edit,
   Delete,
+  FolderOpened,
+  Check,
+  Close,
+  Loading,
+  CircleCheck
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -187,6 +266,113 @@ interface Shop {
   minStart: number
   hourClose: number
   minClose: number
+}
+
+interface ProgressStep {
+  message: string
+  status: 'pending' | 'success' | 'error'
+  time?: string
+}
+
+// 上传相关
+const fileList = ref<any[]>([])
+const selectedFile = ref<File | null>(null)
+const uploading = ref(false)
+const uploadProgress = ref<ProgressStep[]>([])
+
+const progressPercentage = computed(() => {
+  if (uploadProgress.value.length === 0) return 0
+  const completed = uploadProgress.value.filter(step => step.status === 'success').length
+  return Math.round((completed / uploadProgress.value.length) * 100)
+})
+
+const progressStatus = computed(() => {
+  const hasError = uploadProgress.value.some(step => step.status === 'error')
+  return hasError ? 'exception' : 'success'
+})
+
+const handleFileChange = (_file: any, files: any[]) => {
+  fileList.value = files
+  selectedFile.value = files && files.length ? (files[0].raw as File) : null
+  // 重置进度
+  uploadProgress.value = []
+}
+
+const submitUpload = async () => {
+  if (!selectedFile.value) {
+    ElMessage.warning('请先选择文件')
+    return
+  }
+  
+  // 初始化进度
+  uploadProgress.value = [
+    { message: '准备上传文件...', status: 'pending', time: new Date().toLocaleTimeString() },
+    { message: '文件上传中...', status: 'pending' },
+    { message: '验证文件格式...', status: 'pending' },
+    { message: '构建索引中...', status: 'pending' },
+    { message: '完成索引构建', status: 'pending' }
+  ]
+  
+  uploading.value = true
+  try {
+    // 步骤1: 文件上传
+    uploadProgress.value[0].status = 'success'
+    uploadProgress.value[0].time = new Date().toLocaleTimeString()
+    uploadProgress.value[1].status = 'pending'
+    uploadProgress.value[1].time = new Date().toLocaleTimeString()
+    
+    const form = new FormData()
+    form.append('file', selectedFile.value)
+    
+    // 模拟上传延迟
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    const resp = await fetch('http://localhost:8080/api/upload', {
+      method: 'POST',
+      body: form
+    })
+    
+    // 步骤2: 上传完成
+    uploadProgress.value[1].status = 'success'
+    uploadProgress.value[1].time = new Date().toLocaleTimeString()
+    uploadProgress.value[2].status = 'pending'
+    uploadProgress.value[2].time = new Date().toLocaleTimeString()
+    
+    if (!resp.ok) {
+      uploadProgress.value[2].status = 'error'
+      uploadProgress.value[2].time = new Date().toLocaleTimeString()
+      throw new Error(`上传失败: ${resp.status}`)
+    }
+    
+    // 步骤3: 验证完成
+    uploadProgress.value[2].status = 'success'
+    uploadProgress.value[2].time = new Date().toLocaleTimeString()
+    uploadProgress.value[3].status = 'pending'
+    uploadProgress.value[3].time = new Date().toLocaleTimeString()
+    
+    // 模拟构建延迟
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // 步骤4: 构建完成
+    uploadProgress.value[3].status = 'success'
+    uploadProgress.value[3].time = new Date().toLocaleTimeString()
+    uploadProgress.value[4].status = 'success'
+    uploadProgress.value[4].time = new Date().toLocaleTimeString()
+    
+    ElMessage.success('上传并构建索引成功')
+    await loadStatistics()
+    await fetchData()
+  } catch (e) {
+    // 标记当前步骤为错误
+    const currentStep = uploadProgress.value.find(step => step.status === 'pending')
+    if (currentStep) {
+      currentStep.status = 'error'
+      currentStep.time = new Date().toLocaleTimeString()
+    }
+    ElMessage.error(e instanceof Error ? e.message : '上传失败')
+  } finally {
+    uploading.value = false
+  }
 }
 
 // 统计数据
@@ -372,6 +558,125 @@ onMounted(() => {
 .main-content {
   flex: 1;
   overflow-y: auto;
+}
+
+.upload-card {
+  margin-bottom: 20px;
+}
+
+.upload-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.upload-content {
+  padding: 20px 0;
+}
+
+.upload-section {
+  margin-bottom: 20px;
+}
+
+.upload-area {
+  margin-bottom: 16px;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  background: #fafafa;
+  transition: all 0.3s;
+}
+
+.upload-placeholder:hover {
+  border-color: #409EFF;
+  background: #f0f9ff;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #c0c4cc;
+  margin-bottom: 16px;
+}
+
+.upload-text {
+  text-align: center;
+}
+
+.upload-text p {
+  margin: 4px 0;
+  color: #606266;
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: #909399;
+}
+
+.upload-btn {
+  width: 100%;
+  height: 40px;
+}
+
+.progress-section {
+  border-top: 1px solid #e4e7ed;
+  padding-top: 20px;
+}
+
+.progress-section h4 {
+  margin: 0 0 16px 0;
+  color: #303133;
+}
+
+.progress-list {
+  margin-bottom: 16px;
+}
+
+.progress-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-radius: 4px;
+}
+
+.progress-item.completed {
+  background: rgba(103, 194, 58, 0.1);
+  color: #67c23a;
+}
+
+.progress-item.error {
+  background: rgba(245, 108, 108, 0.1);
+  color: #f56c6c;
+}
+
+.progress-item.pending {
+  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
+}
+
+.progress-icon {
+  font-size: 16px;
+}
+
+.progress-text {
+  flex: 1;
+  font-size: 14px;
+}
+
+.progress-time {
+  font-size: 12px;
+  color: #909399;
+}
+
+.progress-bar {
+  margin-top: 8px;
 }
 
 .stat-cards {

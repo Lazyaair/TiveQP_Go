@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,36 +55,79 @@ func isShopOpen(shop Shop, hour, minute int) bool {
 	shopCloseTime := shop.HourClose*60 + shop.MinClose
 	return currentTime >= shopOpenTime && currentTime <= shopCloseTime
 }
+
+// 缓存所有店铺数据
+var allShops []Shop
+var shopTypes []string
+var cities []string
+var initialized bool
+var mutex sync.RWMutex
+
 func main() {
 	ibfLength := 200000
 	Keylist := []string{"2938879577741549", "8729598049525437", "8418086888563864", "0128636306393258", "2942091695121238", "6518873307787549"}
 	rb := 235648
-	filename := "./Data/20k.txt" // 文件名
-	owners, err := construction.LoadOwners(filename)
-	if err != nil {
-		fmt.Println("加载 Owner 数据出错:", err)
-		return
-	}
-	var subroots []*construction.Node
+
+	// 索引与数据文件的运行时状态，由上传接口设置
 	var finalRoot *construction.Node
-	subroots, err = construction.BuildTreesByChunks(owners, ibfLength, Keylist, rb)
-	if err != nil {
-		fmt.Println("Error building subroots:", err)
-	} else {
-		fmt.Println("Subroots built successfully!")
-	}
-	finalRoot, err = construction.CreateFinalTree(subroots, ibfLength, Keylist, rb)
-	if err != nil {
-		fmt.Println("Error creating final tree:", err)
-	} else {
-		fmt.Println("Final tree created successfully!")
-	}
+	var currentDataFile string
+
 	r := gin.Default()
 
 	// 启用CORS中间件
 	r.Use(cors.Default())
 
+	// 上传数据文件并构建索引
+	r.POST("/api/upload", func(c *gin.Context) {
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "未收到文件: " + err.Error()})
+			return
+		}
+		// 确保目录存在
+		_ = os.MkdirAll("./Data", 0755)
+		savePath := filepath.Join("./Data", "upload.txt")
+		if err := c.SaveUploadedFile(file, savePath); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文件失败: " + err.Error()})
+			return
+		}
+
+		owners, err := construction.LoadOwners(savePath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "加载 Owner 数据出错: " + err.Error()})
+			return
+		}
+		// 构建索引
+		subroots, err := construction.BuildTreesByChunks(owners, ibfLength, Keylist, rb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "构建子树失败: " + err.Error()})
+			return
+		}
+		root, err := construction.CreateFinalTree(subroots, ibfLength, Keylist, rb)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "创建最终树失败: " + err.Error()})
+			return
+		}
+		finalRoot = root
+		currentDataFile = savePath
+
+		// 重置统计缓存
+		initialized = false
+		allShops = nil
+		shopTypes = nil
+		cities = nil
+
+		c.JSON(http.StatusOK, gin.H{"message": "上传并构建索引成功"})
+	})
+
 	r.GET("/api/message", func(c *gin.Context) {
+		// 确保已初始化索引
+		if finalRoot == nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "索引未初始化，请先上传数据文件",
+			})
+			return
+		}
 		// 获取参数字符串
 		params := c.Query("params")
 		if params == "" {
@@ -174,13 +218,6 @@ func main() {
 		c.JSON(http.StatusOK, response)
 	})
 
-	// 缓存所有店铺数据
-	var allShops []Shop
-	var shopTypes []string
-	var cities []string
-	var initialized bool
-	var mutex sync.RWMutex
-
 	// 初始化数据的函数
 	initializeData := func() error {
 		mutex.Lock()
@@ -190,7 +227,11 @@ func main() {
 			return nil
 		}
 
-		file, err := os.Open("./Data/20k.txt")
+		if currentDataFile == "" {
+			return fmt.Errorf("尚未上传数据文件")
+		}
+
+		file, err := os.Open(currentDataFile)
 		if err != nil {
 			return err
 		}
